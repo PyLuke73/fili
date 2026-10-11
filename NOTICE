@@ -1,0 +1,24 @@
+usbdrv - third-party components and licenses
+============================================
+
+usbdrv does not include or link any third-party code. It runs the following programs as separate
+processes, only if the user supplies them:
+
+1. libwdi / wdi-simple.exe  (https://github.com/pbatard/libwdi)
+   License: GNU LGPL v3 or later (library and examples/wdi-simple.c).
+   Role: builds the INF + catalog, signs it with a self-signed certificate, installs the driver.
+   Not distributed in this repository: it is fetched and built by the user
+   (docs/building-wdi-simple.md). If you redistribute a wdi-simple.exe binary, the LGPL obligations
+   apply to you (license text, notice, offer of the corresponding source): see docs/licenza.md.
+
+2. Windows components called by name: PowerShell, pnputil.exe, setupapi.dev.log. Part of Windows.
+
+Not used, not copied: Zadig (examples/zadig.c, GNU GPL v3 or later). Its behaviour was studied only to
+document which features usbdrv offers (docs/zadig-features.md).
+
+Driver binaries that libwdi may embed when YOU build it (to be verified at that time, they are
+not in this repository): WinUSB co-installers from the Windows Driver Kit (Microsoft redistribution
+terms), libusb-win32 (libusb0.sys), libusbK (libusbK.sys), usbser (in-box Windows driver).
+Each has its own license: list and verify them before distributing any binary.
+
+usbdrv itself: license to be decided (see docs/licenza.md).

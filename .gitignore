@@ -1,0 +1,12 @@
+# build products and third-party sources (fetched by scripts/build_wdi_simple.sh)
+third_party/
+build/
+dist/
+*.egg-info/
+__pycache__/
+*.pyc
+# local runtime files
+*.log
+usbdrv.toml
+usb_driver/
+usbdrv_*/

@@ -1,0 +1,117 @@
+# Piano di prove di installazione (manuali, da eseguire PRIMA del rilascio)
+
+> **Questo piano NON è stato eseguito.** I comandi che modificano il sistema (`install`, `reinstall`, `restore`/`uninstall`,
+> `cert-remove --thumbprint`) non sono mai stati lanciati per davvero: finora sono stati provati solo i comandi di lettura
+> (`list`, `status`, `diagnose`), i `--dry-run` e i test automatici con un esecutore finto. Nessuna riga di questa tabella dei
+> risultati è compilata.
+>
+> *English summary:* manual test plan to run **before any release**, on a disposable VM or PC with a sacrificial device.
+> It covers WinUSB / libusbK / libusb-win32, simple device vs. composite interface, install / reinstall / restore /
+> uninstall / cert-remove, dry-run vs. real, no admin, ambiguous VID/PID, device unplugged during install, Windows 10 and 11,
+> x64 (and ARM64 if relevant). For each test: preconditions, command, expected result, what to check, PASS/FAIL, plus a results
+> table and a release checklist. None of it has been executed yet.
+
+## 1. Ambiente consigliato
+
+- **Macchina virtuale Windows 10 e Windows 11** (Hyper-V, VMware, VirtualBox) con **passthrough USB** del dispositivo di prova,
+  oppure un **PC di prova** non usato per altro. Mai il PC di lavoro.
+- **Snapshot / punto di ripristino prima di iniziare** e prima di ogni gruppo di prove; verificare che il ripristino funzioni.
+- **Dispositivo sacrificabile**, che non serve per tastiera/mouse/disco: una scheda di sviluppo (anche la Nucleo con ST-LINK
+  `0483:374B`), una chiavetta con un chip noto, un adattatore USB-seriale economico. Per la prova "composito" serve un
+  dispositivo con più interfacce (`MI_00`, `MI_01`…). Se possibile **due dispositivi identici** (prova "ambiguo").
+- Un terminale **amministratore** e uno **normale** aperti. Python 3.9+ (3.11+ per `usbdrv.toml`). `wdi-simple.exe` compilato
+  (`building-wdi-simple.md`), con i driver incorporati che si vogliono provare (WinUSB; libusbK e libusb-win32 solo se incorporati).
+- Strumenti di osservazione: Gestione dispositivi (`devmgmt.msc`), `certmgr.msc` e `certlm.msc` (archivi *Root* e
+  *Trusted Publishers* del computer), `C:\Windows\INF\setupapi.dev.log`, il log di usbdrv (`--log-file prova.log -v`),
+  `pnputil /enum-drivers`.
+- Prima di ogni prova annotare: versione di Windows (`winver`), architettura, versione di usbdrv, commit e hash di `wdi-simple.exe`.
+
+## 2. Come leggere ogni prova
+
+Ogni prova ha: **Precondizioni**, **Comando**, **Atteso**, **Da controllare** (Gestione dispositivi = GD; `certlm` = certificati;
+`setupapi` = `setupapi.dev.log`; log = `prova.log`), **Criterio** (PASS se tutti i punti "atteso" e "da controllare" sono veri;
+FAIL altrimenti, annotando cosa è successo). Dopo ogni prova: ripristinare lo snapshot **oppure** eseguire `restore` e
+`cert-remove` e controllare che il sistema sia tornato com'era. Sostituire `VID/PID/MI` con quelli del dispositivo di prova.
+Tutte le righe hanno `--log-file prova.log -v`.
+
+## 3. Matrice delle prove
+
+Legenda sistemi: W10 = Windows 10, W11 = Windows 11, x64; ARM64 solo se si distribuisce/si dichiara il supporto.
+
+### A. Prove senza modifiche (si possono fare anche sul PC normale)
+
+| # | Prova | Comando | Atteso | Da controllare | Criterio |
+|---|---|---|---|---|---|
+| A1 | elenco | `usbdrv list` / `list --json` | tutti i dispositivi USB presenti, JSON valido, exit 0 | confronto con GD | PASS se coincide con GD |
+| A2 | stato | `usbdrv status --vid V --pid P [--iface N]` | driver, versione, data, provider corretti, exit 0 | GD → Proprietà → Driver | PASS se uguali |
+| A3 | dry-run (ognuno dei comandi che modificano) | `... --dry-run` (con e senza `--yes`, con e senza admin) | stampa piano e comando, **non esegue nulla**, exit 0 | GD invariato, nessun nuovo certificato, `setupapi` senza nuove sezioni, log senza comandi `pnputil`/`wdi-simple` eseguiti | PASS se nulla cambia |
+| A4 | diagnose su un dispositivo con errore noto (es. con driver rimosso) | `usbdrv diagnose --vid V --pid P --since 1d` | codice GD in chiaro, NTSTATUS, righe di `setupapi.dev.log`, eventi | confronto con GD e `setupapi` | PASS se coerente |
+| A5 | extract | `usbdrv extract --vid V --pid P --iface N --out C:\prova\pkg` | solo `usbdrv.inf` nella cartella, exit 0 | **nessun nuovo certificato** in `certlm`; nessun driver nuovo in `pnputil /enum-drivers`; l'INF si apre e ha l'ID hardware giusto | PASS se il sistema è identico a prima |
+
+### B. Prove che modificano il sistema (solo VM/PC di prova, con snapshot)
+
+| # | Prova | Precondizioni | Comando | Atteso | Da controllare | Criterio |
+|---|---|---|---|---|---|---|
+| B1 | install WinUSB, dispositivo semplice | dispositivo non composito, driver diverso da WinUSB | `usbdrv install --vid V --pid P --driver winusb --yes` (admin) | exit 0; dopo: servizio `WinUSB`, nessun codice di errore | GD: "Dispositivi USB"/"Universal Serial Bus devices", driver WinUSB; `certlm`: **nuovo certificato** `CN=… (libwdi autogenerated)` in *Root* e *Trusted Publishers*; `setupapi`: sezione di installazione riuscita; log: comando, exit 0 | PASS se tutto vero |
+| B2 | install WinUSB, interfaccia di un composito | dispositivo composito | `... --iface 0 --driver winusb --yes` | solo `MI_00` cambia; `MI_01` e il genitore invariati | GD per ogni interfaccia; `usbdrv list` | PASS se le altre interfacce non cambiano |
+| B3 | install libusbK | `wdi-simple` con libusbK incorporato | `--driver libusbk --yes` | servizio `libusbK` | come B1 | PASS/FAIL; se non incorporato: "non applicabile" |
+| B4 | install libusb-win32 (e, a parte, `--filter`) | idem | `--driver libusb-win32 --yes` | servizio `libusb0` | come B1 | idem |
+| B5 | `--wcid` | dispositivo con descrittore MS OS/WCID | `--driver winusb --wcid --yes` | driver associato per Compatible ID | GD → ID hardware compatibili | PASS/FAIL |
+| B6 | `--name` e `--timeout` | | `... --name "Mio dispositivo" --timeout 60000 --yes` | nome nell'INF/GD | GD, INF estratto nel dir temporaneo indicato dal log | PASS se il nome compare |
+| B7 | reinstall | dispositivo con WinUSB da B1 | `usbdrv reinstall --vid V --pid P --yes` | exit 0, stesso driver | GD, `setupapi` | PASS se il driver torna funzionante |
+| B8 | restore | dispositivo dopo B1 | `usbdrv restore --vid V --pid P --yes` | pacchetto `oemNN.inf` rimosso; Windows ri-rileva il dispositivo | `pnputil /enum-drivers` (pacchetto sparito); GD (driver originale o "non installato" se non c'è); log | PASS se il dispositivo torna allo stato iniziale |
+| B9 | uninstall (alias di restore) | idem | `usbdrv uninstall ... --yes` | uguale a B8 | | PASS |
+| B10 | cert-remove | certificato creato da B1 | `usbdrv cert-remove` (elenca) poi `--thumbprint <hash> --yes` | certificato sparito da *Root* e *Trusted Publishers* | `certlm` | PASS se non resta nulla di "libwdi autogenerated" non voluto |
+| B11 | senza admin | terminale normale | `usbdrv install ... --yes` | exit **3**, nulla cambia | GD, `certlm` invariati | PASS |
+| B12 | senza `--yes` | admin | `usbdrv install ...` | exit **7**, nulla cambia | idem | PASS |
+| B13 | VID/PID ambiguo | **due** dispositivi identici | `usbdrv install --vid V --pid P --driver winusb --yes` | exit **5**, nulla cambia; con `--instance` scelto: modifica solo quello | GD | PASS |
+| B14 | composito senza `--iface` | dispositivo composito | `... --yes` senza `--iface` | exit **5**, nulla cambia | | PASS |
+| B15 | dispositivo inesistente | | VID/PID non presenti | exit **4** | | PASS |
+| B16 | classe protetta | un mouse/tastiera **solo in VM** | `install ... --yes` senza `--force` | exit **2**, nulla cambia | | PASS (non usare `--force` su input reali) |
+| B17 | scollegamento durante l'installazione | | lanciare `install ... --yes` e staccare il dispositivo (o `usbipd detach`) subito dopo l'avvio | exit **6** o **1**, messaggio chiaro, nessun blocco | log (errore del driver registrato); `certlm` (il certificato può restare: usare `cert-remove`); GD | PASS se il sistema è recuperabile e l'errore è nel log |
+| B18 | fallimento forzato di `wdi-simple` | `--wdi` verso un eseguibile che esce con codice ≠ 0 | | exit **6**, errore e output del programma nel log (livello ERROR) | log | PASS |
+| B19 | log JSON | | `--log-format json` su una prova qualsiasi | ogni riga è JSON valido | `python -c "import json,sys;[json.loads(l) for l in open('prova.log')]"` | PASS |
+| B20 | `usbdrv.toml` | | file con `default_driver` e `log_file` | i default vengono applicati, le opzioni CLI prevalgono, `--yes` non è accettato dal file | | PASS |
+
+### C. Sistemi e architetture
+
+Ripetere **B1, B2, B7, B8, B10, B11, B13** su ognuna: **Windows 10 x64**, **Windows 11 x64**, (**Windows 11 ARM64** se si
+dichiara il supporto: serve `wdi-simple` ARM64 o x64 in emulazione e un dispositivo/VM ARM). Annotare le differenze di comportamento
+(firma del catalogo, avvisi di Windows, Secure Boot, "Core isolation / Memory integrity" attivo: può bloccare driver non firmati).
+
+## 4. Tabella dei risultati (da compilare)
+
+| Prova | Sistema | Data | Dispositivo | Esito (PASS/FAIL/N.A.) | Note / link al log |
+|---|---|---|---|---|---|
+| A1 | W10 x64 | | | | |
+| A1 | W11 x64 | | | | |
+| A3 | W10 x64 | | | | |
+| A5 | W10 x64 | | | | |
+| B1 | W10 x64 | | | | |
+| B1 | W11 x64 | | | | |
+| B2 | W10 x64 | | | | |
+| B2 | W11 x64 | | | | |
+| B3 | W11 x64 | | | | |
+| B4 | W11 x64 | | | | |
+| B7 | W10 x64 | | | | |
+| B8 | W10 x64 | | | | |
+| B10 | W10 x64 | | | | |
+| B11 | W10 x64 | | | | |
+| B13 | W11 x64 | | | | |
+| B17 | W11 x64 | | | | |
+| (altre righe) | | | | | |
+
+## 5. Checklist di rilascio
+
+- [ ] **Licenza** scelta; `LICENSE` completo; `pyproject.toml` aggiornato (`docs/licenza.md`).
+- [ ] **NOTICE** aggiornato con le licenze *verificate* delle dipendenze e dei driver incorporati.
+- [ ] Se si distribuisce `wdi-simple.exe`: testo LGPL/GPL, avviso, offerta/link del sorgente corrispondente, istruzioni di ricostruzione.
+- [ ] **Avvisi di sicurezza** presenti e visibili in README (EN + IT), nell'output di `install` e nella documentazione.
+- [ ] **Versione** aggiornata in `src/usbdrv/__init__.py` e `pyproject.toml`; changelog; tag.
+- [ ] **Test automatici verdi**: `python -I tests/test_usbdrv.py` (nessun errore, nessun avviso di risorse non chiuse).
+- [ ] **Prove manuali** della sezione 3 eseguite almeno su W10 x64 e W11 x64, tabella compilata e archiviata (log inclusi).
+- [ ] Il README dichiara **cosa è stato provato davvero** e cosa no (aggiornare `docs/zadig-features.md`: togliere "untested for real" solo per le funzioni provate).
+- [ ] Ricerca di codice copiato da Zadig/libwdi (`Pete Batard`, `GPL`, `LGPL`) e revisione di `INF_TEMPLATE`.
+- [ ] Se si distribuiscono binari: **hash SHA-256** pubblicati; **firma** del codice se possibile (altrimenti SmartScreen avvisa); build riproducibile documentata.
+- [ ] Nessun file locale nel repository (`*.log`, `usbdrv.toml` personali, `third_party/`, `build/`).
+- [ ] Nessun segreto nei log di esempio.
