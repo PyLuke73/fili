@@ -11,8 +11,10 @@
 >   disable your keyboard, mouse, disk or Bluetooth (`usbdrv` refuses those classes unless you pass `--force`).
 > * Use it **only on devices you own** and understand. Test on a disposable device first (see
 >   [`docs/piano-prove-installazione.md`](docs/piano-prove-installazione.md)).
-> * **Status: pre-release. The commands that change the system (`install`, `reinstall`, `restore`, `cert-remove` without
->   `--dry-run`) have NOT been run for real yet**: only the read-only commands and the unit tests were exercised.
+> * **Status: pre-release.** The commands that change the system (`install` with WinUSB, libusbK and libusb-win32,
+>   `reinstall`, `restore`, `cert-remove`) have been run for real **once, on a virtual USB device in a Windows Server 2022
+>   VM** (details and two bugs found and fixed: [`docs/risultati-prove-installazione.md`](docs/risultati-prove-installazione.md)).
+>   **Not tested yet:** physical devices, composite or identical devices, Windows 10/11 client, ARM64/32-bit.
 >   No warranty — see the license (undecided yet: [`docs/licenza.md`](docs/licenza.md)).
 
 ## What it is
@@ -127,8 +129,10 @@ run as an external program.
 > * **Serve l'amministratore** e **si sostituisce il driver del dispositivo scelto**. Un bersaglio sbagliato può disattivare
 >   tastiera, mouse, disco o Bluetooth (le classi protette sono rifiutate senza `--force`).
 > * Da usare **solo su dispositivi propri**, prima su un dispositivo sacrificabile (vedi `docs/piano-prove-installazione.md`).
-> * **Stato: pre-rilascio. I comandi che modificano il sistema non sono mai stati eseguiti per davvero**: sono stati provati
->   solo i comandi di lettura e i test automatici. Nessuna garanzia. Licenza: MIT (`LICENSE`, `docs/licenza.md`).
+> * **Stato: pre-rilascio.** I comandi che modificano il sistema (`install` con WinUSB, libusbK e libusb-win32, `reinstall`,
+>   `restore`, `cert-remove`) sono stati eseguiti per davvero **una volta, su un dispositivo USB virtuale in una macchina
+>   virtuale Windows Server 2022** (vedi `docs/risultati-prove-installazione.md`, con due difetti trovati e corretti).
+>   **Non provati:** dispositivi fisici, compositi o identici, Windows 10/11 client, ARM64/32 bit. Nessuna garanzia. Licenza: MIT (`LICENSE`, `docs/licenza.md`).
 
 **Uso rapido:** `python -m usbdrv list`, `status`, `diagnose` (sola lettura); `install ... --dry-run` mostra cosa farebbe senza
 eseguire nulla; i comandi che modificano il sistema richiedono `--yes` e un terminale di amministratore. `extract` scrive un

@@ -81,6 +81,10 @@ dichiara il supporto: serve `wdi-simple` ARM64 o x64 in emulazione e un disposit
 
 ## 4. Tabella dei risultati (da compilare)
 
+> Una prima serie di prove reali (macchina virtuale Windows Server 2022, dispositivo USB virtuale) è già documentata in
+> [`risultati-prove-installazione.md`](risultati-prove-installazione.md). La tabella qui sotto è per Windows 10/11 client e
+> per dispositivi fisici.
+
 | Prova | Sistema | Data | Dispositivo | Esito (PASS/FAIL/N.A.) | Note / link al log |
 |---|---|---|---|---|---|
 | A1 | W10 x64 | | | | |

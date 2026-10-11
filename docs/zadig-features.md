@@ -3,7 +3,8 @@
 Source of the feature list: Zadig's menus and dialogs (`examples/zadig.rc`), its sample `zadig.ini`, the option names in
 `wdi-simple --help`, and the libwdi README. No Zadig code was copied (see `licenza.md`).
 
-Legend: **done** = implemented and covered by unit tests with a fake runner · **done, untested for real** = the code
+Legend: **done** = implemented and covered by unit tests with a fake runner · **done, tested in a VM** = run for real on a virtual USB device in a Windows Server 2022 VM
+(`risultati-prove-installazione.md`) · **done, untested for real** = the code
 path that changes the system exists but has never been run (see `piano-prove-installazione.md`) · **no** = not implemented.
 
 | Zadig feature | Status in usbdrv | Notes |
@@ -13,12 +14,12 @@ path that changes the system exists but has never been run (see `piano-prove-ins
 | "Ignore Hubs or Composite Parents" | **done** (`--hubs/--no-hubs`, `--parents/--no-parents`) | defaults: hubs hidden, parents shown; set them in `usbdrv.toml` |
 | Trim trailing whitespace in names (`trim_whitespaces`) | **done** (`--trim`) | |
 | Current driver and target driver with versions | **done** (`status`, `list`, install plan) | current driver: service, INF, version, date, provider; the *target* version is not known before install (libwdi decides) |
-| Driver choice: WinUSB, libusb-win32 (libusb0), libusbK | **done, untested for real** (`--driver`) | passed to `wdi-simple -t`; libusb-win32/libusbK need a wdi-simple built with those drivers embedded |
+| Driver choice: WinUSB, libusb-win32 (libusb0), libusbK | **done, tested in a VM** (`--driver`) | passed to `wdi-simple -t`; libusb-win32/libusbK need a wdi-simple built with those drivers embedded |
 | USB Serial (CDC, usbser) | **done, untested for real** (`--driver usbser`) | only if the wdi-simple build embeds it; otherwise libwdi reports an error (exit 6) |
 | "Custom" / user-embedded driver | no | libwdi can embed your own driver; usbdrv does not expose it |
 | Edit device name (the "Edit" checkbox) | **done** (`--name`) | goes into the INF |
-| Install / Replace driver | **done, untested for real** (`install`) | one interface or device at a time |
-| Reinstall / Upgrade | **done, untested for real** (`reinstall`) | reinstalls the driver currently bound; Zadig's separate "Upgrade" wording is not distinguished |
+| Install / Replace driver | **done, tested in a VM** (`install`) | one interface or device at a time |
+| Reinstall / Upgrade | **done, tested in a VM** (`reinstall`) | reinstalls the driver currently bound; Zadig's separate "Upgrade" wording is not distinguished |
 | Install WCID driver | **done, untested for real** (`--wcid`) | |
 | Install / delete libusb-win32 filter driver | install: **done, untested for real** (`--filter`); delete: no | |
 | "Extract Files (Don't Install)" | **partly** (`extract --out DIR`) | WinUSB only, **unsigned INF**, no catalog, **no certificate**. Stock `wdi-simple -x` is *not* equivalent: it still creates a self-signed certificate and adds it to the machine stores, so usbdrv never calls it |
@@ -28,12 +29,12 @@ path that changes the system exists but has never been run (see `piano-prove-ins
 | "Create New Device" / "Load Preset Device" (driver for an unplugged device) | no | usbdrv only acts on devices that are present |
 | Log verbosity, log window | **done** (`--log-level`, `--log-file`, `-v`, `--log-format json`) | |
 | `zadig.ini` | **done** (`usbdrv.toml`, `usbdrv sample-config`) | `default_driver`, `extract_dir` (≈ `default_dir`), `include_hubs`, `only_no_driver` (≈ `list_all`, inverted), `trim_whitespaces`, `log_level`, `timeout_ms`, `wdi_path`. `advanced_mode`, `exit_on_success`, `extract_only`, `disable_cert_install_warning` have no CLI meaning |
-| Timeout for pending installations | **done, untested for real** (`--timeout MS`) | `wdi-simple -o` |
+| Timeout for pending installations | **done, tested in a VM** (`--timeout MS`) | `wdi-simple -o` |
 | Silent mode | **done** (`--silent`) | also passes `-s` to wdi-simple |
 | Automatic UAC elevation | no | usbdrv checks for an elevated terminal and refuses (exit 3) otherwise |
 | Vendor name resolution (usb.ids) | no | |
 | Update check / policy | no (not applicable) | |
-| *(not in Zadig)* uninstall / restore the original driver | **done, untested for real** (`restore`, `uninstall`) | `pnputil /delete-driver … /uninstall /force` + `/scan-devices`; refuses shared or non-OEM packages |
+| *(not in Zadig)* uninstall / restore the original driver | **done, tested in a VM** (`restore`, `uninstall`) | `pnputil /delete-driver … /uninstall /force` + `/scan-devices`; refuses shared or non-OEM packages |
 | *(not in Zadig)* dry run | **done** | every changing command |
 | *(not in Zadig)* diagnose driver failures | **done** (`diagnose`) | Device Manager code, NTSTATUS, setupapi.dev.log, event logs |
 | *(not in Zadig)* machine-readable output, exit codes | **done** (`--json`, 0–7) | |

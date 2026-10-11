@@ -46,8 +46,47 @@ WARNING - read before continuing
   * Undo the driver change with 'usbdrv restore'."""
 
 
+RESTORE_MAX_PASSES = 5
+
+
+def _oem_codec() -> str:
+    """Code page used by console programs (pnputil, powershell) when their output is piped."""
+    try:
+        return "cp%d" % ctypes.windll.kernel32.GetOEMCP()
+    except Exception:
+        return "cp437"
+
+
+def decode_output(data: bytes) -> str:
+    """Decode the output of a child process: UTF-8 if it is valid, otherwise the OEM code page
+    (pnputil prints localized text such as accented letters in cp850), never failing."""
+    if not data:
+        return ""
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+    try:
+        return data.decode(_oem_codec(), errors="replace")
+    except LookupError:
+        return data.decode("latin-1", errors="replace")
+
+
 def _default_run(cmd: List[str]):
-    return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    res = subprocess.run(cmd, capture_output=True)
+    res.stdout = decode_output(res.stdout)
+    res.stderr = decode_output(res.stderr)
+    return res
+
+
+def _safe_streams(*streams) -> None:
+    """A redirected stdout/stderr can have a code page (cp1252, cp850...) that cannot encode every
+    character in the messages we print (including text coming from Windows tools): replace, never crash."""
+    for s in streams:
+        try:
+            s.reconfigure(errors="replace")
+        except Exception:
+            pass
 
 
 def _default_is_admin() -> bool:
@@ -266,6 +305,7 @@ def _build_parser() -> argparse.ArgumentParser:
     s.add_argument("--since", help="only log sections/events newer than this (2h, 7d, YYYY-MM-DD)")
     s.add_argument("--last", type=int, default=5, help="how many setupapi.dev.log sections to show (default 5)")
     s.add_argument("--no-events", action="store_true", help="skip the Windows event logs")
+    s.add_argument("--max-events", type=int, default=10, help="how many Windows events to show (default 10)")
     s.add_argument("--setupapi", help="path of setupapi.dev.log (default C:\\Windows\\INF\\setupapi.dev.log)")
 
     s = add("cert-remove", help="list/remove the self-signed certificates created by libwdi")
@@ -299,6 +339,7 @@ def main(argv: Optional[List[str]] = None, *, run: Optional[Callable] = None,
          out=None, err=None, setupapi_text: Optional[str] = None) -> int:
     stream = out or sys.stdout
     errs = err or sys.stderr
+    _safe_streams(stream, errs)
     env = os.environ if env is None else env
     try:
         args = _build_parser().parse_args(argv)
@@ -506,6 +547,29 @@ def _cmd_restore(args, dev, devs, run, admin, o: Out) -> int:
     code = _execute(cmds, run, o)
     if code != EXIT_OK:
         return code
+    # After a 'reinstall' (or a repeated install) the driver store can hold SEVERAL libwdi packages for the
+    # same device. Removing the bound one makes Windows bind the next one, so the device would still not be
+    # back on its original driver: remove the leftovers too, a few passes at most.
+    for _ in range(RESTORE_MAX_PASSES):
+        now = [d for d in list_devices(run) if d.instance_id.lower() == dev.instance_id.lower()]
+        if not now or not ops.is_libwdi_package(now[0]):
+            break
+        left = now[0]
+        o.say("note: the device is now bound to another libwdi package (%s): removing it too." % left.inf_path)
+        try:
+            more = ops.restore_plan(left, list_devices(run), args.force)
+        except ValueError as e:
+            o.fail(str(e))
+            return EXIT_DRIVER
+        for c in more:
+            o.say("  " + _q(c))
+        code = _execute(more, run, o)
+        if code != EXIT_OK:
+            return code
+    else:
+        o.fail("the device is still bound to a libwdi package after %d passes. Run 'usbdrv diagnose'."
+               % RESTORE_MAX_PASSES)
+        return EXIT_DRIVER
     return _post_check(dev, None, run, o)
 
 
@@ -532,7 +596,8 @@ def _cmd_diagnose(args, dev, run, o: Out, setupapi_text: Optional[str]) -> int:
             text = diagnose.read_setupapi(path)
         except OSError as e:
             note = "cannot read %s: %s" % (path, e)
-    events = [] if args.no_events else diagnose.read_events(run, dev, since or diagnose.default_since())
+    events = [] if args.no_events else diagnose.read_events(run, dev, since or diagnose.default_since(),
+                                                            max(1, args.max_events))
     rep = diagnose.build_report(dev, text, events, since, args.last)
     o.data = rep
     o.say(_fmt_dev(dev))

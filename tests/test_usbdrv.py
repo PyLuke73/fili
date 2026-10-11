@@ -60,11 +60,12 @@ READ_ONLY_MARKERS = ("Get-PnpDevice", "Get-ChildItem", "Get-WinEvent")
 class FakeRun:
     """Records every command; answers the read-only PowerShell queries from fixtures."""
 
-    def __init__(self, devices_json=None, fail=None, after=None):
+    def __init__(self, devices_json=None, fail=None, after=None, after_seq=None):
         self.calls = []
         self.devices_json = devices_json if devices_json is not None else DEVICES
         self.fail = fail or {}        # substring -> (returncode, stdout, stderr)
         self.after = after            # devices JSON returned from the 2nd enumeration on
+        self.after_seq = after_seq    # or: one list per enumeration from the 2nd on (the last repeats)
         self.enumerations = 0
 
     def __call__(self, cmd):
@@ -78,6 +79,8 @@ class FakeRun:
             if "Get-PnpDevice" in script:
                 self.enumerations += 1
                 data = self.after if (self.after is not None and self.enumerations > 1) else self.devices_json
+                if self.after_seq and self.enumerations > 1:
+                    data = self.after_seq[min(self.enumerations - 2, len(self.after_seq) - 1)]
                 return types.SimpleNamespace(returncode=0, stdout=json.dumps(data), stderr="")
             if "Get-ChildItem" in script:
                 return types.SimpleNamespace(returncode=0, stdout=json.dumps(CERTS), stderr="")
@@ -328,11 +331,77 @@ class TestRestore(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertEqual(run.mutating(), [])
 
+    @staticmethod
+    def _with_probe_driver(inf, provider, service="WinUSB"):
+        """DEVICES with the interface MI_00 bound to the given package."""
+        out = json.loads(json.dumps(DEVICES))
+        for d in out:
+            if d["InstanceId"].startswith("USB\\VID_0483&PID_374B&MI_00"):
+                d.update(InfPath=inf, Provider=provider, Service=service)
+        return out
+
     def test_execution_with_fake(self):
-        run = FakeRun()
+        original = self._with_probe_driver("input.inf", "Microsoft", "HidUsb")
+        run = FakeRun(after=original)
         code, out, err, run = call(["restore", "--vid", "0483", "--pid", "374B", "--iface", "0", "--yes"], run=run, admin=True)
         self.assertEqual(code, 0, err)
         self.assertEqual([c[1] for c in run.mutating()], ["/delete-driver", "/scan-devices"])
+
+    def test_restore_removes_leftover_libwdi_packages(self):
+        # found on a real system: after 'reinstall' two libwdi packages exist (oem5, oem6); removing the bound
+        # one made Windows bind the older one and the device stayed on WinUSB although restore exited 0
+        leftover = self._with_probe_driver("oem41.inf", "libwdi")
+        original = self._with_probe_driver("input.inf", "Microsoft", "HidUsb")
+        run = FakeRun(after_seq=[leftover, leftover, original])
+        code, out, err, run = call(["restore", "--vid", "0483", "--pid", "374B", "--iface", "0", "--yes"], run=run, admin=True)
+        self.assertEqual(code, 0, err)
+        deletes = [c for c in run.mutating() if c[1] == "/delete-driver"]
+        self.assertEqual([c[2] for c in deletes], ["oem42.inf", "oem41.inf"])
+        self.assertIn("another libwdi package", out)
+
+    def test_restore_gives_up_after_a_few_passes(self):
+        stuck = self._with_probe_driver("oem41.inf", "libwdi")
+        run = FakeRun(after_seq=[stuck])
+        code, out, err, run = call(["restore", "--vid", "0483", "--pid", "374B", "--iface", "0", "--yes"], run=run, admin=True)
+        self.assertEqual(code, cli.EXIT_DRIVER)
+        self.assertIn("still bound", err)
+        self.assertLessEqual(len([c for c in run.mutating() if c[1] == "/delete-driver"]), cli.RESTORE_MAX_PASSES + 1)
+
+
+class TestEncoding(unittest.TestCase):
+    """Found by the first real installation test (Windows Server 2022, Italian, output redirected):
+    pnputil printed cp850 text, usbdrv decoded it as UTF-8 with U+FFFD and then could not print U+FFFD
+    to a cp1252 stdout ('charmap' codec error): restore ran but returned exit code 2."""
+
+    def test_decode_output_utf8_and_oem(self):
+        self.assertEqual(cli.decode_output(b""), "")
+        self.assertEqual(cli.decode_output("perch\u00e9 ok".encode("utf-8")), "perch\u00e9 ok")
+        orig = cli._oem_codec
+        try:
+            cli._oem_codec = lambda: "cp850"
+            self.assertEqual(cli.decode_output(b"perch\x82 ok"), "perch\u00e9 ok")   # cp850: 0x82 = e acute
+            self.assertIsInstance(cli.decode_output(bytes(range(256))), str)          # never raises
+            cli._oem_codec = lambda: "cp99999"
+            self.assertIsInstance(cli.decode_output(b"\xff\xfe abc"), str)           # unknown code page
+        finally:
+            cli._oem_codec = orig
+
+    def test_streams_never_raise_on_unencodable_text(self):
+        import io
+        raw = io.BytesIO()
+        stream = io.TextIOWrapper(raw, encoding="cp1252", errors="strict")
+        cli._safe_streams(stream)
+        stream.write("bad char: \ufffd and \u0411\n")            # not encodable in cp1252
+        stream.flush()
+        self.assertIn(b"bad char", raw.getvalue())
+
+    def test_main_survives_unencodable_tool_output(self):
+        import io
+        out = io.TextIOWrapper(io.BytesIO(), encoding="cp1252", errors="strict")
+        err = io.TextIOWrapper(io.BytesIO(), encoding="cp1252", errors="strict")
+        code = cli.main(["list"], run=FakeRun(), is_admin=lambda: True, out=out, err=err)
+        self.assertEqual(code, 0)
+        out.flush()
 
 
 class TestHelp(unittest.TestCase):

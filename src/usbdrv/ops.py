@@ -107,6 +107,11 @@ def install_command(wdi: str, dev: UsbDevice, driver: str, dest: str, *, name: O
     return cmd
 
 
+def is_libwdi_package(dev: UsbDevice) -> bool:
+    """True if the device is bound to an OEM package published by libwdi (what this tool installs)."""
+    return bool(OEM_INF_RE.match(dev.inf_path or "")) and (dev.provider or "").strip().lower() == "libwdi"
+
+
 def restore_plan(dev: UsbDevice, all_devices: List[UsbDevice], force: bool = False) -> List[List[str]]:
     """Commands to remove the driver package bound to dev and let Windows re-detect it.
 

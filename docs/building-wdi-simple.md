@@ -5,9 +5,10 @@ It is not shipped here: you build it (or provide your own) and tell usbdrv where
 in `usbdrv.toml`, `%USBDRV_WDI%`, a copy on `PATH`, or `build\wdi-simple.exe`.
 
 > **Status: the build below is PROVEN on the author's machine** (Windows 11 Pro, MSYS2 ucrt64 gcc 14.2.0, libwdi v1.5.1,
-> commit `9b23b82a2dd1cbffc16d46c212f92c6bf8c0c602`), twice, from scratch. **The resulting exe has only been compiled and
-> inspected statically** (`file`, `objdump -p`, `strings`): it has **never been run**, so installing a driver with it is
-> still untested (see `piano-prove-installazione.md`).
+> commit `9b23b82a2dd1cbffc16d46c212f92c6bf8c0c602`), twice, from scratch. **The resulting exe was compiled and inspected
+> statically** (`file`, `objdump -p`, `strings`) and then **run for real inside a Windows Server 2022 VM** to install WinUSB,
+> libusbK and libusb-win32 on a virtual USB device (see `risultati-prove-installazione.md`); other systems and physical
+> devices are untested (see `piano-prove-installazione.md`).
 
 ## Two scripts, nothing installed on the PC
 
