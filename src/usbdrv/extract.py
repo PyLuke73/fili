@@ -20,7 +20,9 @@ from .ops import clean_name
 # driver through Include/Needs = winusb.inf). The section names and directives are the
 # documented ones, so they are dictated by the INF format; the text, the comments and the
 # values are ours. Targets Windows 10/11 (the USBDevice class and winusb.inf are in-box, so
-# no ClassInstall32 section and no co-installers). The file libwdi/winusb.inf.in was NOT
+# no ClassInstall32 section and no co-installers; the service and the KMDF section come from
+# winusb.inf through Needs = WINUSB.NT and WINUSB.NT.Services, the same way Windows' own
+# INFs for WinUSB devices use it, so no AddService/Wdf sections are repeated here). The file libwdi/winusb.inf.in was NOT
 # consulted for this template.
 INF_TEMPLATE = """\
 ; usbdrv: UNSIGNED driver package for inspection only.
@@ -33,6 +35,7 @@ Class     = USBDevice
 ClassGuid = {{88BAE032-5A81-49f0-BC3D-A4FF138216D6}}
 Provider  = %ProviderName%
 DriverVer = {date}, 1.0.0.0
+PnpLockdown = 1
 
 [Manufacturer]
 %ProviderName% = Models, NTx86, NTamd64, NTarm64
@@ -52,31 +55,10 @@ Include = winusb.inf
 Needs   = WINUSB.NT
 
 [Install.Services]
-Include    = winusb.inf
-AddService = WinUSB, 0x00000002, WinUSB_Service
+Include = winusb.inf
+Needs   = WINUSB.NT.Services
 
-[WinUSB_Service]
-DisplayName   = "WinUSB"
-ServiceType   = 1
-StartType     = 3
-ErrorControl  = 1
-ServiceBinary = %12%\\winusb.sys
-
-[Install.Wdf]
-KmdfService = WINUSB, WinUSB_Wdf
-
-[WinUSB_Wdf]
-KmdfLibraryVersion = 1.9
-
-[Install.HW]
-AddReg = {guid_section}
-
-[AddInterfaceGuid]
-HKR,, DeviceInterfaceGUIDs, 0x10000, "{guid}"
-
-[NoInterfaceGuid]
-; WCID device: the interface GUID comes from the device's own descriptors.
-
+{hw_block}
 [Strings]
 ProviderName = "usbdrv"
 DeviceDesc   = "{name}"
@@ -94,10 +76,18 @@ def hardware_id(dev: UsbDevice, wcid: bool) -> str:
 def render_inf(dev: UsbDevice, *, name: Optional[str] = None, wcid: bool = False,
                date: str = "01/01/2024", guid: Optional[str] = None) -> str:
     guid = guid or "{%s}" % str(uuid.uuid4())
+    # Only the section that is used goes into the file (infverif warns about unreferenced sections).
+    if wcid:
+        hw_block = ""            # WCID device: the interface GUID comes from the device's own descriptors
+    else:
+        hw_block = ("[Install.HW]\n"
+                    "AddReg = AddInterfaceGuid\n"
+                    "\n"
+                    "[AddInterfaceGuid]\n"
+                    "HKR,, DeviceInterfaceGUIDs, 0x10000, \"%s\"\n" % guid)
     return INF_TEMPLATE.format(
         hwid=hardware_id(dev, wcid), name=clean_name(name or dev.name),
-        guid=guid, date=date,
-        guid_section="NoInterfaceGuid" if wcid else "AddInterfaceGuid")
+        date=date, hw_block=hw_block)
 
 
 def extract_package(dev: UsbDevice, out_dir: str, driver: str, *, name: Optional[str] = None,

@@ -30,8 +30,17 @@ rivedere il confronto a una persona che non ha visto il sorgente di Zadig.
 visto anche `libwdi/winusb.inf.in` (LGPL). È stata **riscritta da zero** da chi non ha consultato quel file (la riscrittura è stata fatta in una sessione che non ha mai letto `winusb.inf.in`), partendo dalla struttura documentata da Microsoft in «WinUSB (Winusb.sys) Installation»
 (`Include/Needs = winusb.inf`, sezioni `.Services`, `.Wdf`, `.HW`). Le direttive e i nomi di sezione sono quelli imposti dal
 formato INF; testo, commenti, nomi delle sezioni locali e valori sono nostri; rimossi `ClassInstall32` e i co-installer (inutili
-su Windows 10/11). La provenienza è scritta nel commento sopra `INF_TEMPLATE`. Limite: il file **non è stato validato con gli
-strumenti del WDK** (`infverif`) né installato; resta da provarlo (piano di prove).
+su Windows 10/11). La provenienza è scritta nel commento sopra `INF_TEMPLATE`. **Validazione con il WDK (11/10/2026).** Eseguito `infverif.exe` 10.0.26100.6584 (WDK 10.0.26100, scaricato dal pacchetto NuGet
+`Microsoft.Windows.WDK.x64`, senza installare nulla) con le modalità `/w` (driver Windows) e `/u` (universale) su un INF generato
+da `usbdrv extract`, con e senza `--wcid`. Esito: **nessun errore e nessun avviso**, a patto di aggiungere una riga
+`CatalogFile`; senza, resta solo `ERROR(1233) Missing directive CatalogFile`, previsto perché l'INF generato è volutamente
+senza catalogo e senza firma (solo per ispezione). Le prime versioni dell'INF davano anche `WARNING(1324)` (manca
+`PnpLockdown=1`), `WARNING(2083)` (sezioni non usate) e `WARNING(2084)` (servizio `winusb.sys` senza CopyFiles): corretti
+aggiungendo `PnpLockdown = 1`, generando solo il blocco GUID usato e passando a `Needs = WINUSB.NT.Services`, lo stesso schema
+che usa il `winusb.inf` di Windows per ADB e Billboard. Nota: `infverif` stampa anche `ERROR(1000) INF '' c...` (messaggio
+troncato dallo strumento, riga 0) su **qualsiasi** INF, compreso `C:\Windows\INF\winusb.inf` di Windows: è un problema
+dell'ambiente di esecuzione dello strumento (verosimilmente manca un file di prodotto), non dell'INF. Limiti: `infverif`
+controlla sintassi e regole, **non prova l'installazione**: la prova su un dispositivo resta da fare (piano di prove).
 
 ## 2. Perché il nostro codice può restare libero
 

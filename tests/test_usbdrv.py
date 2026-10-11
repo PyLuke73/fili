@@ -332,6 +332,18 @@ class TestExtract(unittest.TestCase):
             self.assertEqual(run.mutating(), [])
             self.assertIn("system is unchanged", out)
 
+    def test_inf_sections_are_all_used(self):
+        # infverif warns about unreferenced sections: render only the guid block that is used
+        from usbdrv.devices import UsbDevice
+        dev = UsbDevice("USB\VID_1234&PID_0001\X", 0x1234, 1, None, "", "USB", "OK", "T", "", "", "", "", "", 0, None)
+        plain = extract.render_inf(dev)
+        wcid = extract.render_inf(dev, wcid=True)
+        self.assertIn("PnpLockdown = 1", plain)
+        self.assertIn("[AddInterfaceGuid]", plain)
+        self.assertNotIn("NoInterfaceGuid", plain)
+        self.assertNotIn("[AddInterfaceGuid]", wcid)
+        self.assertNotIn("[Install.HW]", wcid)
+
     def test_wcid_and_refusals(self):
         with tempfile.TemporaryDirectory() as tmp:
             code, *_ = call(["extract", "--vid", "1234", "--pid", "0001", "--out", tmp, "--wcid"])
