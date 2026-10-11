@@ -95,7 +95,7 @@ def parse_hex_id(text: str, what: str = "ID") -> int:
     if t.startswith("0x"):
         t = t[2:]
     if not re.fullmatch(r"[0-9a-f]{1,4}", t):
-        raise ValueError("invalid %s '%s': expected 1-4 hex digits (e.g. 0483)" % (what, text))
+        raise ValueError("invalid %s '%s': expected 1-4 hex digits (e.g. 1234)" % (what, text))
     return int(t, 16)
 
 

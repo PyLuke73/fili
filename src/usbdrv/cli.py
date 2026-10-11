@@ -14,6 +14,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import textwrap
 from typing import Callable, List, Optional
 
 from . import __version__, diagnose, extract, ops
@@ -111,16 +112,103 @@ def _common(p: argparse.ArgumentParser) -> None:
 
 
 def _target(p: argparse.ArgumentParser, required: bool = True) -> None:
-    p.add_argument("--vid", required=required, help="vendor ID, hex (e.g. 0483)")
-    p.add_argument("--pid", required=required, help="product ID, hex (e.g. 374B)")
+    p.add_argument("--vid", required=required, help="vendor ID, hex (e.g. 1234)")
+    p.add_argument("--pid", required=required, help="product ID, hex (e.g. 5678)")
     p.add_argument("--iface", type=int, help="interface number (MI_xx) for composite devices")
     p.add_argument("--instance", help="exact instance ID, to pick one of several identical devices")
 
 
+_EXAMPLES = {
+    "main": """\
+Examples (1234:5678 stands for the VID:PID of your device):
+  usbdrv list                                   show the USB devices and their drivers
+  usbdrv status --vid 1234 --pid 5678           show the driver bound to a device
+  usbdrv install --vid 1234 --pid 5678 --driver winusb --dry-run
+                                                show what would be done, run nothing
+  usbdrv install --vid 1234 --pid 5678 --driver winusb --yes
+                                                replace the driver (Administrator)
+  usbdrv diagnose --vid 1234 --pid 5678         why does the driver fail to start?
+
+Run 'usbdrv <command> --help' for the options and examples of each command.
+""",
+    "list": """\
+Examples:
+  usbdrv list                          devices that are present now
+  usbdrv list --only-no-driver         only devices that have no driver
+  usbdrv list --hubs --parents         include hubs and composite parents
+  usbdrv list --json                   machine-readable output
+""",
+    "status": """\
+Examples:
+  usbdrv status --vid 1234 --pid 5678
+  usbdrv status --vid 1234 --pid 5678 --iface 1          one interface of a composite device
+  usbdrv status --vid 1234 --pid 5678 --instance "USB\\VID_1234&PID_5678\\SERIAL1"
+                                                         one of several identical devices
+""",
+    "install": """\
+Examples:
+  usbdrv install --vid 1234 --pid 5678 --driver winusb --dry-run
+      print the plan and the command, execute nothing (start here)
+  usbdrv install --vid 1234 --pid 5678 --driver winusb --yes
+      replace the driver (needs Administrator and --yes)
+  usbdrv install --vid 1234 --pid 5678 --iface 1 --driver libusbk --yes
+      replace the driver of interface 1 only
+  usbdrv install --vid 1234 --pid 5678 --driver winusb --name "My device" --yes
+      set the device name written in the INF
+  usbdrv --log-file usbdrv.log -v install --vid 1234 --pid 5678 --driver winusb --yes
+      keep a timestamped log of the run
+
+The driver is signed with a self-signed certificate that is added to this PC's trusted
+stores: see 'usbdrv cert-remove --help' to list and remove it.
+""",
+    "reinstall": """\
+Examples:
+  usbdrv reinstall --vid 1234 --pid 5678 --dry-run
+  usbdrv reinstall --vid 1234 --pid 5678 --iface 1 --yes
+""",
+    "restore": """\
+Examples:
+  usbdrv restore --vid 1234 --pid 5678 --dry-run         show what would be removed
+  usbdrv restore --vid 1234 --pid 5678 --yes             go back to the original driver
+  usbdrv restore --vid 1234 --pid 5678 --iface 1 --yes   one interface only
+""",
+    "extract": """\
+Examples:
+  usbdrv extract --vid 1234 --pid 5678 --out pkg          write pkg\\usbdrv.inf (unsigned)
+  usbdrv extract --vid 1234 --pid 5678 --iface 1 --out pkg
+  usbdrv extract --vid 1234 --pid 5678 --wcid --out pkg   match the WCID compatible ID
+
+Nothing is installed and no certificate is created: the INF is only for inspection.
+""",
+    "diagnose": """\
+Examples:
+  usbdrv diagnose                                    all devices that report a problem
+  usbdrv diagnose --vid 1234 --pid 5678              one device
+  usbdrv diagnose --vid 1234 --pid 5678 --since 2h   only events of the last 2 hours
+  usbdrv diagnose --vid 1234 --pid 5678 --last 10 --no-events
+  usbdrv --json diagnose --vid 1234 --pid 5678       machine-readable output
+""",
+    "cert-remove": """\
+Examples:
+  usbdrv cert-remove                                  list the certificates (changes nothing)
+  usbdrv cert-remove --thumbprint <40 hex> --dry-run  show what would be removed
+  usbdrv cert-remove --thumbprint <40 hex> --yes      remove it (Administrator)
+""",
+    "sample-config": """\
+Examples:
+  usbdrv sample-config > usbdrv.toml
+  usbdrv --config usbdrv.toml list
+""",
+}
+
+
 def _build_parser() -> argparse.ArgumentParser:
+    raw = argparse.RawDescriptionHelpFormatter
     p = argparse.ArgumentParser(
-        prog="usbdrv", epilog="Exit codes: " + "; ".join("%d %s" % kv for kv in EXIT_CODES.items()),
-        description="Replace the driver of a USB device/interface from the command line (Windows). "
+        prog="usbdrv", formatter_class=raw,
+        epilog=_EXAMPLES["main"] + "\n" + textwrap.fill(
+            "Exit codes: " + "; ".join("%d %s" % kv for kv in EXIT_CODES.items()), width=78),
+        description="Replace the driver of a USB device/interface from the command line (Windows).\n"
                     "Read-only commands: list, status, diagnose, extract, sample-config and --dry-run.")
     p.add_argument("--version", action="version", version="usbdrv " + __version__)
     _common(p)
@@ -129,7 +217,7 @@ def _build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     def add(name, **kw):
-        sp = sub.add_parser(name, **kw)
+        sp = sub.add_parser(name, formatter_class=raw, epilog=_EXAMPLES.get("restore" if name == "uninstall" else name), **kw)
         _common(sp)
         return sp
 
