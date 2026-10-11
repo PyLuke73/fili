@@ -15,71 +15,71 @@ from typing import Optional
 from .devices import UsbDevice
 from .ops import clean_name
 
+# Provenance: written from the structure documented by Microsoft in "WinUSB (Winusb.sys)
+# Installation" (Windows Driver docs, sample INF that binds a device to the in-box WinUSB
+# driver through Include/Needs = winusb.inf). The section names and directives are the
+# documented ones, so they are dictated by the INF format; the text, the comments and the
+# values are ours. Targets Windows 10/11 (the USBDevice class and winusb.inf are in-box, so
+# no ClassInstall32 section and no co-installers). The file libwdi/winusb.inf.in was NOT
+# consulted for this template.
 INF_TEMPLATE = """\
-; usbdrv - UNSIGNED package for inspection. Not installable on 64-bit Windows as is
-; (no catalog file). Generated for: {hwid}
-[Strings]
-DeviceName = "{name}"
-VendorName = "usbdrv"
-SourceName = "{name} Install Disk"
-DeviceID   = "{hwid}"
-DeviceGUID = "{guid}"
+; usbdrv: UNSIGNED driver package for inspection only.
+; It has no catalog file, so 64-bit Windows will not install it as is.
+; Generated for: {hwid}
 
 [Version]
-Signature   = "$Windows NT$"
-Class       = "USBDevice"
-ClassGuid   = {{88bae032-5a81-49f0-bc3d-a4ff138216d6}}
-Provider    = "usbdrv"
-DriverVer   = {date}, 1.0.0.0
-
-[ClassInstall32]
-Addreg = WinUSBDeviceClassReg
-
-[WinUSBDeviceClassReg]
-HKR,,,0,"Universal Serial Bus devices"
-HKR,,Icon,,-20
+Signature = "$Windows NT$"
+Class     = USBDevice
+ClassGuid = {{88BAE032-5A81-49f0-BC3D-A4FF138216D6}}
+Provider  = %ProviderName%
+DriverVer = {date}, 1.0.0.0
 
 [Manufacturer]
-%VendorName% = Device_WinUSB,NTx86,NTamd64,NTarm64
+%ProviderName% = Models, NTx86, NTamd64, NTarm64
 
-[Device_WinUSB.NTx86]
-%DeviceName% = USB_Install, USB\\%DeviceID%
+[Models.NTx86]
+%DeviceDesc% = Install, USB\\{hwid}
 
-[Device_WinUSB.NTamd64]
-%DeviceName% = USB_Install, USB\\%DeviceID%
+[Models.NTamd64]
+%DeviceDesc% = Install, USB\\{hwid}
 
-[Device_WinUSB.NTarm64]
-%DeviceName% = USB_Install, USB\\%DeviceID%
+[Models.NTarm64]
+%DeviceDesc% = Install, USB\\{hwid}
 
-[USB_Install]
+; --- Install: use the WinUSB driver that ships with Windows ---------------------------
+[Install]
 Include = winusb.inf
 Needs   = WINUSB.NT
 
-[USB_Install.Services]
+[Install.Services]
 Include    = winusb.inf
-AddService = WinUSB,0x00000002,WinUSB_ServiceInstall
+AddService = WinUSB, 0x00000002, WinUSB_Service
 
-[WinUSB_ServiceInstall]
-DisplayName   = "WinUSB - Kernel Driver"
+[WinUSB_Service]
+DisplayName   = "WinUSB"
 ServiceType   = 1
 StartType     = 3
 ErrorControl  = 1
-ServiceBinary = %12%\\WinUSB.sys
+ServiceBinary = %12%\\winusb.sys
 
-[USB_Install.Wdf]
-KmdfService = WINUSB, WinUsb_Install
+[Install.Wdf]
+KmdfService = WINUSB, WinUSB_Wdf
 
-[WinUsb_Install]
-KmdfLibraryVersion = 1.11
+[WinUSB_Wdf]
+KmdfLibraryVersion = 1.9
 
-[USB_Install.HW]
+[Install.HW]
 AddReg = {guid_section}
 
-[NoDeviceInterfaceGUID]
-; WCID: the interface GUID comes from the device's own descriptors
+[AddInterfaceGuid]
+HKR,, DeviceInterfaceGUIDs, 0x10000, "{guid}"
 
-[AddDeviceInterfaceGUID]
-HKR,,DeviceInterfaceGUIDs,0x10000,%DeviceGUID%
+[NoInterfaceGuid]
+; WCID device: the interface GUID comes from the device's own descriptors.
+
+[Strings]
+ProviderName = "usbdrv"
+DeviceDesc   = "{name}"
 """
 
 
@@ -97,7 +97,7 @@ def render_inf(dev: UsbDevice, *, name: Optional[str] = None, wcid: bool = False
     return INF_TEMPLATE.format(
         hwid=hardware_id(dev, wcid), name=clean_name(name or dev.name),
         guid=guid, date=date,
-        guid_section="NoDeviceInterfaceGUID" if wcid else "AddDeviceInterfaceGUID")
+        guid_section="NoInterfaceGuid" if wcid else "AddInterfaceGuid")
 
 
 def extract_package(dev: UsbDevice, out_dir: str, driver: str, *, name: Optional[str] = None,

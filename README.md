@@ -141,4 +141,4 @@ INF non firmato per ispezione e **non crea certificati**. `install` richiede `wd
 **Log e diagnosi:** `--log-file` (testo o JSON), `-v`, `--log-level`; `diagnose` spiega i codici di errore di Windows
 (es. 10, 28, 43, 52), l'NTSTATUS, il driver corrente e le righe di `setupapi.dev.log` relative al dispositivo.
 
-**Test:** `python -I tests/test_usbdrv.py` (non toccano il sistema).
+**Test:** `python -I tests/test_usbdrv.py` e `python -I tests/test_bundle.py` (non toccano il sistema).

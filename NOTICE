@@ -7,9 +7,15 @@ processes, only if the user supplies them:
 1. libwdi / wdi-simple.exe  (https://github.com/pbatard/libwdi)
    License: GNU LGPL v3 or later (library and examples/wdi-simple.c).
    Role: builds the INF + catalog, signs it with a self-signed certificate, installs the driver.
+   Copyright (c) 2010-2023 Pete Batard and other contributors (see AUTHORS in the libwdi source).
+   Version checked: v1.5.1, commit 9b23b82a2dd1cbffc16d46c212f92c6bf8c0c602.
+   Source: https://github.com/pbatard/libwdi
    Not distributed in this repository: it is fetched and built by the user
-   (docs/building-wdi-simple.md). If you redistribute a wdi-simple.exe binary, the LGPL obligations
-   apply to you (license text, notice, offer of the corresponding source): see docs/licenza.md.
+   (docs/building-wdi-simple.md). The texts of the LGPL-3.0 and of the GPL-3.0 it refers to are in
+   LICENSES/.
+   If you redistribute a wdi-simple.exe binary, the LGPL obligations apply to that binary (license
+   text, notice, corresponding source, way to rebuild it): use scripts/package_wdi_bundle.py, which
+   refuses to build the bundle unless all of it is there. See docs/licenza.md section 4.
 
 2. Windows components called by name: PowerShell, pnputil.exe, setupapi.dev.log. Part of Windows.
 

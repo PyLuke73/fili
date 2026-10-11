@@ -2,13 +2,13 @@
 
 > **Stato: licenza scelta dal titolare: MIT** (Copyright (c) 2026 PyLuke73), testo in `LICENSE`. Scelta compatibile
 > con l'architettura attuale: nessun codice di Zadig (GPL) copiato, libwdi (LGPL) usata solo come programma esterno.
-> Restano aperti: la provenienza di `INF_TEMPLATE` (vedi sotto) e gli obblighi LGPL se si distribuisce un binario di
-> `wdi-simple.exe`. Questo documento non è un parere legale.
+> `INF_TEMPLATE` è stato riscritto dalla documentazione Microsoft (vedi §1). Gli obblighi LGPL per un eventuale
+> binario di `wdi-simple.exe` sono coperti da `scripts/package_wdi_bundle.py` (vedi §4). Questo documento non è un parere legale.
 >
 > *English summary:* the project is licensed under the **MIT License** (`LICENSE`). Valid as long as no GPL code from
-> Zadig is copied and libwdi (LGPL) stays a separate program. Open points: provenance of `INF_TEMPLATE`, and LGPL duties if a
-> `wdi-simple.exe` binary is shipped. The text below lists the options considered, the dependency obligations, and a release
-> checklist. Not legal advice.
+> Zadig is copied and libwdi (LGPL) stays a separate program. `INF_TEMPLATE` was rewritten from Microsoft's documentation
+> (see section 1). LGPL duties for a redistributed `wdi-simple.exe` are handled by `scripts/package_wdi_bundle.py`
+> (section 4). The text below lists the options considered, the dependency obligations, and a release checklist. Not legal advice.
 
 ## 1. Fatti verificati nel repository di libwdi (tag v1.5.1, commit `9b23b82`)
 
@@ -26,10 +26,12 @@ Cosa abbiamo e non abbiamo fatto: nessuna riga di `zadig.c` è stata copiata o a
 mirate in `zadig.c`, solo i nomi delle azioni e delle opzioni (es. "Install", "Replace", "Reinstall", "Upgrade",
 `extract_only`, `list_all`). Il codice di usbdrv è stato scritto da zero. Chi vuole una provenienza documentata può far
 rivedere il confronto a una persona che non ha visto il sorgente di Zadig.
-Nota di cautela: il generatore di INF di `extract` (`src/usbdrv/extract.py`) è stato scritto seguendo la struttura standard
-di un INF WinUSB della documentazione Microsoft, ma l'autore ha avuto sotto gli occhi anche `libwdi/winusb.inf.in`
-(LGPL). Se si vuole una provenienza inattaccabile, **far riscrivere o rivedere `INF_TEMPLATE` a chi non l'ha visto**
-oppure confrontarlo con l'esempio ufficiale Microsoft.
+**Template INF (risolto).** La prima versione di `INF_TEMPLATE` (`src/usbdrv/extract.py`) era stata scritta da chi aveva
+visto anche `libwdi/winusb.inf.in` (LGPL). È stata **riscritta da zero** da chi non ha consultato quel file (la riscrittura è stata fatta in una sessione che non ha mai letto `winusb.inf.in`), partendo dalla struttura documentata da Microsoft in «WinUSB (Winusb.sys) Installation»
+(`Include/Needs = winusb.inf`, sezioni `.Services`, `.Wdf`, `.HW`). Le direttive e i nomi di sezione sono quelli imposti dal
+formato INF; testo, commenti, nomi delle sezioni locali e valori sono nostri; rimossi `ClassInstall32` e i co-installer (inutili
+su Windows 10/11). La provenienza è scritta nel commento sopra `INF_TEMPLATE`. Limite: il file **non è stato validato con gli
+strumenti del WDK** (`infverif`) né installato; resta da provarlo (piano di prove).
 
 ## 2. Perché il nostro codice può restare libero
 
@@ -60,7 +62,15 @@ clean-room in `CONTRIBUTING.md`).
 - `NOTICE` con le dipendenze (già presente);
 - gli utenti costruiscono da soli `wdi-simple.exe` (nessun obbligo LGPL per noi).
 
-**Se si distribuisce anche `wdi-simple.exe`** (binario LGPL-3.0-or-later):
+**Se si distribuisce anche `wdi-simple.exe`** (binario LGPL-3.0-or-later). Usa lo script, che applica i punti seguenti e
+**rifiuta** di creare il pacchetto se manca qualcosa:
+`python -I scripts/package_wdi_bundle.py --exe wdi-simple.exe --out dist/wdi-bundle --drivers-file drivers.txt`
+(il pacchetto viene creato in una cartella temporanea e rinominato solo a lavoro finito; non installa nulla).
+Cosa contiene: `wdi-simple.exe`, `LICENSES/LGPL-3.0.txt` e `GPL-3.0.txt`, `NOTICE`, `LICENSE`,
+`THIRD_PARTY/libwdi-SOURCE.txt` (versione, commit, copyright, offerta scritta), l'archivio dei **sorgenti** di libwdi della
+stessa versione (scaricato dal tag o passato con `--source-archive`), `THIRD_PARTY/embedded-drivers.txt` (l'elenco dei driver
+incorporati con la licenza di ciascuno, **che devi scrivere tu dopo averli verificati**), `docs/building-wdi-simple.md`,
+`SHA256SUMS`. Test: `python -I tests/test_bundle.py` (file finti, nessuna rete). Gli obblighi elencati:
 - includere il **testo della LGPL-3.0** (e della GPL-3.0 che essa richiama) e un avviso di copyright di libwdi;
 - indicare che il binario usa libwdi e dove ottenere il **sorgente corrispondente** (stessa versione/tag); è prudente includerlo
   o fare un'offerta scritta valida (3 anni è la prassi GPL; la LGPL-3 richiede di rendere disponibile il sorgente);
@@ -71,12 +81,12 @@ clean-room in `CONTRIBUTING.md`).
 
 ## 5. Checklist "cosa devo fare al rilascio"
 
-- [ ] Decidere la licenza e sostituire `LICENSE` con il testo completo; aggiungere `license` in `pyproject.toml`.
-- [ ] Mettere nome/anno del titolare nelle intestazioni dove richiesto (non inventare il nome: usare quello reale).
+- [x] Licenza MIT scelta: `LICENSE` e `license` in `pyproject.toml` fatti.
+- [ ] Controllare che il titolare del copyright («PyLuke73») sia quello voluto (nome reale o handle).
 - [ ] Verificare che nessun file contenga codice copiato da Zadig/libwdi (ricerca di commenti `Pete Batard`, `libwdi`, `LGPL`, `GPL`).
-- [ ] Rivedere `INF_TEMPLATE` (provenienza, §1).
+- [x] `INF_TEMPLATE` riscritto dalla documentazione Microsoft (§1); da validare con `infverif` e con la prova di installazione.
 - [ ] Aggiornare `NOTICE` con le licenze **verificate** dei driver incorporati nel binario che si distribuisce.
-- [ ] Se si distribuisce `wdi-simple.exe`: testo LGPL/GPL, avviso, link/offerta del sorgente, versione/tag esatti, istruzioni di ricostruzione.
+- [ ] Se si distribuisce `wdi-simple.exe`: usare `scripts/package_wdi_bundle.py` (testi LGPL/GPL, avviso, offerta e sorgente, versione e commit, istruzioni di ricostruzione, elenco dei driver verificati) e pubblicare `SHA256SUMS`.
 - [ ] Controllare che README e `--help` mostrino l'avviso di sicurezza (certificato autofirmato, amministratore, solo dispositivi propri).
 - [ ] Marcare nel README ciò che è stato provato davvero e ciò che no (`docs/piano-prove-installazione.md`).
 - [ ] Un avvocato o un servizio di compliance se il progetto è commerciale o ridistribuito da un'azienda.
