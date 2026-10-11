@@ -1,0 +1,2 @@
+# shell scripts must keep LF endings even with core.autocrlf=true (bash fails on CRLF)
+*.sh text eol=lf
