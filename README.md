@@ -128,7 +128,7 @@ run as an external program.
 >   tastiera, mouse, disco o Bluetooth (le classi protette sono rifiutate senza `--force`).
 > * Da usare **solo su dispositivi propri**, prima su un dispositivo sacrificabile (vedi `docs/piano-prove-installazione.md`).
 > * **Stato: pre-rilascio. I comandi che modificano il sistema non sono mai stati eseguiti per davvero**: sono stati provati
->   solo i comandi di lettura e i test automatici. Nessuna garanzia. Licenza ancora da decidere (`docs/licenza.md`).
+>   solo i comandi di lettura e i test automatici. Nessuna garanzia. Licenza: MIT (`LICENSE`, `docs/licenza.md`).
 
 **Uso rapido:** `python -m usbdrv list`, `status`, `diagnose` (sola lettura); `install ... --dry-run` mostra cosa farebbe senza
 eseguire nulla; i comandi che modificano il sistema richiedono `--yes` e un terminale di amministratore. `extract` scrive un

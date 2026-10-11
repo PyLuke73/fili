@@ -21,4 +21,4 @@ not in this repository): WinUSB co-installers from the Windows Driver Kit (Micro
 terms), libusb-win32 (libusb0.sys), libusbK (libusbK.sys), usbser (in-box Windows driver).
 Each has its own license: list and verify them before distributing any binary.
 
-usbdrv itself: license to be decided (see docs/licenza.md).
+usbdrv itself: MIT License, Copyright (c) 2026 PyLuke73 (see LICENSE and docs/licenza.md).

@@ -1,11 +1,14 @@
 # Licenza / License
 
-> **Stato: la licenza di usbdrv non è ancora stata scelta.** Il file `LICENSE` contiene solo il segnaposto
-> "LICENSE: da decidere". Finché non si sceglie, il codice è "tutti i diritti riservati" per default: nessuno può
-> riusarlo. La scelta spetta al titolare del progetto. Questo documento non è un parere legale.
+> **Stato: licenza scelta dal titolare: MIT** (Copyright (c) 2026 PyLuke73), testo in `LICENSE`. Scelta compatibile
+> con l'architettura attuale: nessun codice di Zadig (GPL) copiato, libwdi (LGPL) usata solo come programma esterno.
+> Restano aperti: la provenienza di `INF_TEMPLATE` (vedi sotto) e gli obblighi LGPL se si distribuisce un binario di
+> `wdi-simple.exe`. Questo documento non è un parere legale.
 >
-> *English summary:* the license is **undecided** (`LICENSE` is a placeholder). Below: the options, the obligations that come
-> from the dependencies, and a release checklist. Not legal advice.
+> *English summary:* the project is licensed under the **MIT License** (`LICENSE`). Valid as long as no GPL code from
+> Zadig is copied and libwdi (LGPL) stays a separate program. Open points: provenance of `INF_TEMPLATE`, and LGPL duties if a
+> `wdi-simple.exe` binary is shipped. The text below lists the options considered, the dependency obligations, and a release
+> checklist. Not legal advice.
 
 ## 1. Fatti verificati nel repository di libwdi (tag v1.5.1, commit `9b23b82`)
 
