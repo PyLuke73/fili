@@ -37,9 +37,7 @@ da `usbdrv extract`, con e senza `--wcid`. Esito: **nessun errore e nessun avvis
 senza catalogo e senza firma (solo per ispezione). Le prime versioni dell'INF davano anche `WARNING(1324)` (manca
 `PnpLockdown=1`), `WARNING(2083)` (sezioni non usate) e `WARNING(2084)` (servizio `winusb.sys` senza CopyFiles): corretti
 aggiungendo `PnpLockdown = 1`, generando solo il blocco GUID usato e passando a `Needs = WINUSB.NT.Services`, lo stesso schema
-che usa il `winusb.inf` di Windows per ADB e Billboard. Nota: `infverif` stampa anche `ERROR(1000) INF '' c...` (messaggio
-troncato dallo strumento, riga 0) su **qualsiasi** INF, compreso `C:\Windows\INF\winusb.inf` di Windows: è un problema
-dell'ambiente di esecuzione dello strumento (verosimilmente manca un file di prodotto), non dell'INF. Limiti: `infverif`
+che usa il `winusb.inf` di Windows per ADB e Billboard. Nota: eseguito da Git Bash, `infverif` mostrava `ERROR(1000) INF '' c...` su qualsiasi INF: era un **artefatto della shell** (Git Bash converte `/w`, `/u` in percorsi di file). Lanciato da PowerShell l'errore non compare, nemmeno sul `winusb.inf` di Windows usato come controllo (che invece dà gli errori attesi per un INF Microsoft: provider, catalogo, ecc.). I risultati qui sopra sono quelli di PowerShell, anche con `/h` (requisiti WHQL): nessun errore con `CatalogFile`. Limiti: `infverif`
 controlla sintassi e regole, **non prova l'installazione**: la prova su un dispositivo resta da fare (piano di prove).
 
 ## 2. Perché il nostro codice può restare libero
