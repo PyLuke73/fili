@@ -35,8 +35,8 @@ THUMB_RE = re.compile(r"^[0-9A-Fa-f]{40}$")
 CERT_LIST_SCRIPT = r"""
 $ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-# The .NET store API is used on purpose, not the Cert: drive: a 'powershell' started from PowerShell 7
-# (inherited PSModulePath) does not load the Cert: drive and the listing came out empty.
+# The .NET store API is used on purpose, not the certificate PSDrive: a 'powershell' started from PowerShell 7
+# (inherited PSModulePath) does not load that drive and the listing came out empty.
 $rows = @(foreach ($s in 'Root','TrustedPublisher') {
   $st = New-Object System.Security.Cryptography.X509Certificates.X509Store($s, 'LocalMachine')
   $st.Open('ReadOnly')
