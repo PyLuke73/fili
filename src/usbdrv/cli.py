@@ -48,6 +48,15 @@ WARNING - read before continuing
 
 RESTORE_MAX_PASSES = 5
 
+# libwdi returns WDI_ERROR_NEEDS_ADMIN (-15) when it cannot start its installer process. Besides a missing
+# elevation this was seen once on a PC with a third-party antivirus, on the very first run of a freshly
+# extracted installer; it did not happen again.
+WDI_NEEDS_ADMIN = (-15, 0xFFFFFFF1)
+
+ADMIN_HELP = """Administrator rights are required. Open an elevated terminal and run the same command again:
+  Start menu -> right-click 'Windows Terminal' or 'PowerShell' -> Run as administrator
+  (or press Win+X and choose 'Terminal (Admin)')."""
+
 
 def _oem_codec() -> str:
     """Code page used by console programs (pnputil, powershell) when their output is piped."""
@@ -118,6 +127,7 @@ class Out:
         self.messages: List[str] = []
         self.data = None
         self.error: Optional[str] = None
+        self.last_rc: Optional[int] = None
 
     def say(self, *parts) -> None:
         text = " ".join(str(p) for p in parts)
@@ -450,13 +460,15 @@ def _gate(args, admin, o: Out) -> Optional[int]:
     """Common checks before executing anything that changes the system. None = go ahead."""
     if args.dry_run:
         o.say("\n[dry-run] nothing executed.")
+        if not admin():
+            o.say("note: this terminal is NOT elevated; the real run needs Administrator.\n" + ADMIN_HELP)
         o.data = dict(o.data or {}, dry_run=True)
         return EXIT_OK
     if not args.yes:
         o.fail("confirmation missing: re-run with --yes to proceed (or --dry-run to preview).")
         return EXIT_CANCELLED
     if not admin():
-        o.fail("Administrator rights are required: run from an elevated terminal.")
+        o.fail(ADMIN_HELP)
         return EXIT_NOT_ADMIN
     return None
 
@@ -465,6 +477,7 @@ def _execute(cmds: List[List[str]], run, o: Out) -> int:
     for c in cmds:
         o.say("running: " + _q(c))
         res = run(c)
+        o.last_rc = res.returncode
         if res.stdout:
             o.say(res.stdout.rstrip())
         if res.returncode != 0:
@@ -529,6 +542,15 @@ def _cmd_install(args, cfg, dev, run, admin, env, o: Out) -> int:
         o.fail("wdi-simple.exe not found: build it (docs/building-wdi-simple.md) or pass --wdi.")
         return EXIT_ERROR
     code = _execute([build(tempfile.mkdtemp(prefix="usbdrv_"))], run, o)
+    if code != EXIT_OK and o.last_rc in WDI_NEEDS_ADMIN:
+        o.error = None
+        o.say("note: libwdi could not start its installer (exit -15). Retrying once; if the terminal is elevated, "
+              "an antivirus scanning the new file is the likely cause.")
+        code = _execute([build(tempfile.mkdtemp(prefix="usbdrv_"))], run, o)
+        if code != EXIT_OK and o.last_rc in WDI_NEEDS_ADMIN:
+            o.fail("libwdi reports it cannot run its installer with administrative privileges. Check that "
+                   "the terminal is elevated, then retry; if it still fails, allow the temporary installer in "
+                   "your antivirus.")
     if code != EXIT_OK:
         return code
     return _post_check(dev, EXPECTED_SERVICE[driver], run, o)

@@ -242,6 +242,18 @@ class TestSafety(unittest.TestCase):
             self.assertEqual(run.mutating(), [])
             self.assertIn("Administrator", err)
 
+    def test_not_admin_explains_how_to_elevate(self):
+        code, out, err, run = call(["restore", "--vid", "0483", "--pid", "374B", "--iface", "0", "--yes"])
+        self.assertEqual(code, 3)
+        self.assertIn("Run as administrator", err)
+
+    def test_dry_run_warns_when_not_elevated(self):
+        code, out, err, run = call(["restore", "--vid", "0483", "--pid", "374B", "--iface", "0", "--dry-run"], admin=False)
+        self.assertEqual(code, 0)
+        self.assertIn("NOT elevated", out)
+        code, out, err, run = call(["restore", "--vid", "0483", "--pid", "374B", "--iface", "0", "--dry-run"], admin=True)
+        self.assertNotIn("NOT elevated", out)
+
     def test_protected_class(self):
         with tempfile.TemporaryDirectory() as tmp:
             argv = ["install", "--vid", "093A", "--pid", "2510", "--driver", "winusb", "--wdi", fake_wdi(tmp), "--dry-run"]
@@ -280,6 +292,16 @@ class TestInstall(unittest.TestCase):
             self.assertEqual(cmd[cmd.index("-o") + 1], "5000")
             self.assertIn("-s", cmd)
             self.assertNotIn("-i", cmd)  # not an interface
+
+    def test_needs_admin_error_is_retried_once(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            wdi = fake_wdi(tmp)
+            argv = ["install", "--vid", "1234", "--pid", "0001", "--driver", "winusb", "--wdi", wdi, "--yes"]
+            run = FakeRun(fail={wdi: (0xFFFFFFF1, "", "")})
+            code, out, err, run = call(argv, run=run, admin=True)
+            self.assertEqual(code, 6)
+            self.assertEqual(len([c for c in run.calls if c[0] == wdi]), 2)
+            self.assertIn("antivirus", err)
 
     def test_interface_flags(self):
         with tempfile.TemporaryDirectory() as tmp:
