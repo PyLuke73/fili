@@ -107,7 +107,7 @@ dichiara il supporto: serve `wdi-simple` ARM64 o x64 in emulazione e un disposit
 
 ## 5. Checklist di rilascio
 
-- [ ] **Licenza** scelta; `LICENSE` completo; `pyproject.toml` aggiornato (`docs/licenza.md`).
+- [x] **Licenza** scelta; `LICENSE` completo; `pyproject.toml` aggiornato (`docs/licenza.md`).
 - [ ] **NOTICE** aggiornato con le licenze *verificate* delle dipendenze e dei driver incorporati.
 - [ ] Se si distribuisce `wdi-simple.exe`: testo LGPL/GPL, avviso, offerta/link del sorgente corrispondente, istruzioni di ricostruzione.
 - [ ] **Avvisi di sicurezza** presenti e visibili in README (EN + IT), nell'output di `install` e nella documentazione.

@@ -15,7 +15,7 @@
 >   `reinstall`, `restore`, `cert-remove`) have been run for real **once, on a virtual USB device in a Windows Server 2022
 >   VM** (details and two bugs found and fixed: [`docs/risultati-prove-installazione.md`](docs/risultati-prove-installazione.md)).
 >   **Not tested yet:** physical devices, composite or identical devices, Windows 10/11 client, ARM64/32-bit.
->   No warranty — see the license (undecided yet: [`docs/licenza.md`](docs/licenza.md)).
+>   No warranty — MIT License, see [`LICENSE`](LICENSE) and [`docs/licenza.md`](docs/licenza.md).
 
 ## What it is
 
@@ -112,7 +112,7 @@ The tests never touch the system (a fake command runner; the real one is replace
 
 ## Contributing, license
 
-[`CONTRIBUTING.md`](CONTRIBUTING.md) · license **to be decided**: [`docs/licenza.md`](docs/licenza.md) · dependencies: [`NOTICE`](NOTICE).
+[`CONTRIBUTING.md`](CONTRIBUTING.md) · license **MIT** ([`LICENSE`](LICENSE), [`docs/licenza.md`](docs/licenza.md)) · dependencies: [`NOTICE`](NOTICE).
 Clean-room note: Zadig's source (GPL-3.0-or-later) was not copied or adapted; libwdi/wdi-simple (LGPL-3.0-or-later) is only
 run as an external program.
 
