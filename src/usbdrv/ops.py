@@ -35,12 +35,28 @@ THUMB_RE = re.compile(r"^[0-9A-Fa-f]{40}$")
 CERT_LIST_SCRIPT = r"""
 $ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+# The .NET store API is used on purpose, not the Cert: drive: a 'powershell' started from PowerShell 7
+# (inherited PSModulePath) does not load the Cert: drive and the listing came out empty.
 $rows = @(foreach ($s in 'Root','TrustedPublisher') {
-  Get-ChildItem ('Cert:\LocalMachine\' + $s) | Where-Object { $_.Subject -like '*%s*' } |
-    ForEach-Object { [pscustomobject]@{ Store = $s; Thumbprint = $_.Thumbprint; Subject = $_.Subject; NotAfter = $_.NotAfter.ToString('s') } }
+  $st = New-Object System.Security.Cryptography.X509Certificates.X509Store($s, 'LocalMachine')
+  $st.Open('ReadOnly')
+  foreach ($c in $st.Certificates) {
+    if ($c.Subject -like '*%s*') {
+      [pscustomobject]@{ Store = $s; Thumbprint = $c.Thumbprint; Subject = $c.Subject; NotAfter = $c.NotAfter.ToString('s') }
+    }
+  }
+  $st.Close()
 })
 ConvertTo-Json -InputObject $rows -Compress
 """ % CERT_MARK
+
+
+CERT_REMOVE_SCRIPT = (
+    "$st = New-Object System.Security.Cryptography.X509Certificates.X509Store('%s', 'LocalMachine'); "
+    "$st.Open('ReadWrite'); "
+    "try { $c = @($st.Certificates | Where-Object { $_.Thumbprint -eq '%s' }); "
+    "if ($c.Count -eq 0) { throw 'LocalMachine\\%s\\%s: certificate not found' }; $st.Remove($c[0]) } "
+    "finally { $st.Close() }")
 
 
 @dataclass(frozen=True)
@@ -153,5 +169,5 @@ def cert_removal_commands(certs: List[Cert], thumbprint: str) -> List[List[str]]
     if not hits:
         raise ValueError("no certificate with that thumbprint among the libwdi ones (nothing removed)")
     return [["powershell", "-NoProfile", "-NonInteractive", "-Command",
-             "Remove-Item -LiteralPath 'Cert:\\LocalMachine\\%s\\%s'" % (c.store, c.thumbprint)]
+             CERT_REMOVE_SCRIPT % (c.store, c.thumbprint, c.store, c.thumbprint)]
             for c in hits]
