@@ -45,14 +45,15 @@ usbdrv does not modify any of these files. libwdi copies them into the package i
 3. libusbK 3.1.0.0 (libusbK.sys, libusbK.dll, libusb0.dll shim)
    Licence : dual licence, New BSD option or GPL option, chosen by whoever redistributes
              (https://github.com/mcuee/libusbk, "Licensing").
-   Chosen  : New BSD. Keep the copyright notice and licence text of libusbK with the binary.
+   Chosen  : New BSD. Keep the copyright notice and licence text of libusbK with the binary:
+             LICENSES/BSD-3-Clause-libusbK.txt (verbatim copy of libusbK/license/LICENSE-bsd.txt at tag
+             V3.1.0.0, copyright (c) 2011-2012 Travis Lee Robinson) and LICENSES/AUTHORS-libusbK.txt.
+             Verified: the driver sources (libusbK/src/sys) state "GPL v3 or BSD-style license, at the
+             discretion of the user". The BSD text forbids using the author's name to endorse derived products.
    Source  : https://github.com/mcuee/libusbk/releases/download/V3.1.0.0/libusbK-3.1.0.0-bin.7z
              (SHA-256: 38605d8d5a86f408a4b7bec60f6d4a096050eee72f89a63a8d5be125252d3fe7)
    SHA-256 : libusbK.sys amd64 1df66ff22e2eaec27180756d90926ca5b07e8bcf6b0e4e3c56471e63a3a05fa6
              libusbK.sys x86   6265ae9ae5c49f515613f0b749ad8390a1b34ca326203318bffeb6c2c281d2d0
-   Not verified: the binary archive carries no licence file of its own; the BSD/GPL statement comes from the
-             project page. Copy the exact licence text from the libusbK repository for the tag used before
-             distributing.
 
 4. USB Serial (CDC)
    usbser.sys is the in-box Windows driver; nothing from it is redistributed.

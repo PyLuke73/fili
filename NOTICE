@@ -27,7 +27,8 @@ Driver binaries that libwdi may embed when YOU build it (not in this repository)
   * WinUSB co-installers from the Windows Driver Kit 8.0: Microsoft Windows Driver Frameworks 1.11 terms
     (redistribution allowed with conditions, including an indemnity toward Microsoft).
   * libusb-win32 1.4.0.0: driver libusb0.sys under the GPL, library and installer under the LGPL.
-  * libusbK 3.1.0.0: dual license, New BSD or GPL.
+  * libusbK 3.1.0.0: dual license, New BSD or GPL (we choose BSD: LICENSES/BSD-3-Clause-libusbK.txt,
+    copyright (c) 2011-2012 Travis Lee Robinson).
   * usbser: in-box Windows driver, not redistributed.
 Run 'usbdrv licenses' to print this list. Before distributing a binary, list only the drivers it really
 contains (docs/embedded-drivers.txt) and follow docs/licenza.md section 4.

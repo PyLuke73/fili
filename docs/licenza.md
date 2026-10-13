@@ -101,7 +101,7 @@ parte (una "release" con il pacchetto di `package_wdi_bundle.py`) solo accettand
 |---|---|---|
 | WinUSB: co-installer del WDK 8.0 (`WdfCoInstaller01011.dll`, `winusbcoinstaller2.dll`) | Microsoft Windows Driver Frameworks 1.11, «Distributable Code» | niente modifiche, solo Windows, avviso di copyright, **manleva verso Microsoft**, no licenze copyleft sul codice distribuito; servono solo a Windows vecchi (XP/Vista), non a 10/11 |
 | libusb-win32 1.4.0.0 | driver `libusb0.sys` **GPL**; libreria e installer LGPL | testo delle licenze e **sorgente corrispondente** di libusb-win32 1.4.0.0 |
-| libusbK 3.1.0.0 | doppia: **New BSD** o GPL, a scelta | scelta BSD: mantenere avviso e testo; il testo esatto va copiato dal repository (l'archivio binario non lo contiene) |
+| libusbK 3.1.0.0 | doppia: **New BSD** o GPL, a scelta (lo dichiarano le intestazioni dei sorgenti del driver) | scelta BSD: mantenere avviso e testo, già copiato in `LICENSES/BSD-3-Clause-libusbK.txt` (dal tag V3.1.0.0) e `AUTHORS-libusbK.txt`; non usare il nome dell'autore per promuovere il prodotto |
 | CDC (`usbser`) | driver di Windows | niente: non viene ridistribuito |
 
 **Come lo gestisce Zadig (solo comportamento osservato, nessun codice o testo copiato):** il programma ha una finestra di
@@ -117,7 +117,7 @@ driver** (libwdi accetta anche solo `--with-libusbk`) e togliere dall'elenco gli
 - [ ] Controllare che il titolare del copyright («PyLuke73») sia quello voluto (nome reale o handle).
 - [ ] Verificare che nessun file contenga codice copiato da Zadig/libwdi (ricerca di commenti `Pete Batard`, `libwdi`, `LGPL`, `GPL`).
 - [x] `INF_TEMPLATE` riscritto dalla documentazione Microsoft (§1); da validare con `infverif` e con la prova di installazione.
-- [x] `NOTICE` e `docs/embedded-drivers.txt` con le licenze verificate dei driver (13/10/2026); da riverificare il testo BSD di libusbK dal repository prima di distribuire un binario.
+- [x] `NOTICE` e `docs/embedded-drivers.txt` con le licenze verificate dei driver (13/10/2026); testo BSD di libusbK copiato da libusbK V3.1.0.0 (`LICENSES/`).
 - [ ] Se si distribuisce `wdi-simple.exe`: usare `scripts/package_wdi_bundle.py` (testi LGPL/GPL, avviso, offerta e sorgente, versione e commit, istruzioni di ricostruzione, elenco dei driver verificati) e pubblicare `SHA256SUMS`.
 - [ ] Controllare che README e `--help` mostrino l'avviso di sicurezza (certificato autofirmato, amministratore, solo dispositivi propri).
 - [ ] Marcare nel README ciò che è stato provato davvero e ciò che no (`docs/piano-prove-installazione.md`).

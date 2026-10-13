@@ -111,8 +111,11 @@ def _fill(exe, out, drivers_file, tag, commit, source_archive, download, root):
     os.makedirs(os.path.join(out, "docs"), exist_ok=True)
 
     shutil.copy2(exe, os.path.join(out, "wdi-simple.exe"))
-    for rel in ("LICENSES/LGPL-3.0.txt", "LICENSES/GPL-3.0.txt"):
-        shutil.copy2(os.path.join(root, rel), os.path.join(out, rel))
+    # every license text of the repository (LGPL, GPL, and the BSD text of libusbK) goes with the binary
+    lic_dir = os.path.join(root, "LICENSES")
+    for name in sorted(os.listdir(lic_dir)):
+        if os.path.isfile(os.path.join(lic_dir, name)):
+            shutil.copy2(os.path.join(lic_dir, name), os.path.join(out, "LICENSES", name))
     for rel in ("NOTICE", "LICENSE"):
         shutil.copy2(os.path.join(root, rel), os.path.join(out, rel))
     shutil.copy2(os.path.join(root, "docs", "building-wdi-simple.md"),
