@@ -138,9 +138,11 @@ def restore_plan(dev: UsbDevice, all_devices: List[UsbDevice], force: bool = Fal
     if not OEM_INF_RE.match(inf or ""):
         raise ValueError("the driver of %s (%s) is not an OEM package (inf='%s'): nothing to remove"
                          % (dev.vidpid, dev.instance_id, inf or "-"))
-    if dev.service.lower() not in LIBWDI_SERVICES and not force:
-        raise ValueError("service '%s' is not WinUSB/libusbK/libusb0, so the package was probably not installed "
-                         "by this tool. Use --force to remove it anyway." % (dev.service or "-"))
+    # a libwdi package is recognised by its provider too: an 'install --driver usbser' leaves service 'usbser'
+    if dev.service.lower() not in LIBWDI_SERVICES and not is_libwdi_package(dev) and not force:
+        raise ValueError("service '%s' is not WinUSB/libusbK/libusb0 and the package was not published by libwdi, "
+                         "so it was probably not installed by this tool. Use --force to remove it anyway."
+                         % (dev.service or "-"))
     others = [d.instance_id for d in all_devices
               if d.instance_id != dev.instance_id and d.inf_path.lower() == inf.lower()]
     if others:

@@ -14,7 +14,10 @@
 > * **Status: pre-release.** The commands that change the system (`install` with WinUSB, libusbK and libusb-win32,
 >   `reinstall`, `restore`, `cert-remove`) have been run for real **once, on a virtual USB device in a Windows Server 2022
 >   VM** (details and two bugs found and fixed: [`docs/risultati-prove-installazione.md`](docs/risultati-prove-installazione.md)).
->   **Not tested yet:** physical devices, composite or identical devices, Windows 10/11 client, ARM64/32-bit.
+>   Then on a **physical device** (the built-in webcam, a composite device, Windows 11 Pro): WinUSB, libusbK,
+>   libusb-win32, `usbser`, `--name`, `reinstall`, `restore`, `cert-remove`
+>   ([`docs/risultati-prove-hardware.md`](docs/risultati-prove-hardware.md); three more bugs fixed).
+>   **Not tested yet:** identical devices, `--filter`, a non-elevated run, Windows 10 / Memory Integrity / Secure Boot, ARM64/32-bit.
 >   No warranty — MIT License, see [`LICENSE`](LICENSE) and [`docs/licenza.md`](docs/licenza.md).
 
 ## What it is
@@ -133,7 +136,10 @@ run as an external program.
 > * **Stato: pre-rilascio.** I comandi che modificano il sistema (`install` con WinUSB, libusbK e libusb-win32, `reinstall`,
 >   `restore`, `cert-remove`) sono stati eseguiti per davvero **una volta, su un dispositivo USB virtuale in una macchina
 >   virtuale Windows Server 2022** (vedi `docs/risultati-prove-installazione.md`, con due difetti trovati e corretti).
->   **Non provati:** dispositivi fisici, compositi o identici, Windows 10/11 client, ARM64/32 bit. Nessuna garanzia. Licenza: MIT (`LICENSE`, `docs/licenza.md`).
+>   Poi su un **dispositivo fisico** (la webcam integrata, dispositivo composito, Windows 11 Pro): WinUSB, libusbK, libusb-win32,
+>   `usbser`, `--name`, `reinstall`, `restore`, `cert-remove` (`docs/risultati-prove-hardware.md`, altri tre difetti corretti).
+>   **Non provati:** dispositivi identici, `--filter`, esecuzione senza amministratore, Windows 10 / Memory Integrity / Secure Boot,
+>   ARM64/32 bit. Nessuna garanzia. Licenza: MIT (`LICENSE`, `docs/licenza.md`).
 
 **Uso rapido:** `python -m usbdrv list`, `status`, `diagnose` (sola lettura); `install ... --dry-run` mostra cosa farebbe senza
 eseguire nulla; i comandi che modificano il sistema richiedono `--yes` e un terminale di amministratore. `extract` scrive un

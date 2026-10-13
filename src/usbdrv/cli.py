@@ -52,6 +52,9 @@ RESTORE_MAX_PASSES = 5
 # elevation this was seen once on a PC with a third-party antivirus, on the very first run of a freshly
 # extracted installer; it did not happen again.
 WDI_NEEDS_ADMIN = (-15, 0xFFFFFFF1)
+# libwdi returns WDI_ERROR_EXISTS (-13) when Windows finds no driver to update for the device; with --wcid this
+# is what happens on a device that does not advertise the WCID compatible ID.
+WDI_EXISTS = (-13, 0xFFFFFFF3)
 
 ADMIN_HELP = """Administrator rights are required. Open an elevated terminal and run the same command again:
   Start menu -> right-click 'Windows Terminal' or 'PowerShell' -> Run as administrator
@@ -565,6 +568,9 @@ def _cmd_install(args, cfg, dev, run, admin, env, o: Out) -> int:
             o.fail("libwdi reports it cannot run its installer with administrative privileges. Check that "
                    "the terminal is elevated, then retry; if it still fails, allow the temporary installer in "
                    "your antivirus.")
+    if code != EXIT_OK and o.last_rc in WDI_EXISTS:
+        o.fail("libwdi found no driver to install for this device (WDI_ERROR_EXISTS)."
+               + (" --wcid only works on devices that advertise the WCID compatible ID: try without it." if wcid else ""))
     if code != EXIT_OK:
         return code
     return _post_check(dev, EXPECTED_SERVICE[driver], run, o)

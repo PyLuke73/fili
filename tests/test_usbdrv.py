@@ -303,6 +303,15 @@ class TestInstall(unittest.TestCase):
             self.assertEqual(len([c for c in run.calls if c[0] == wdi]), 2)
             self.assertIn("antivirus", err)
 
+    def test_exists_error_explains_wcid(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            wdi = fake_wdi(tmp)
+            argv = ["install", "--vid", "1234", "--pid", "0001", "--driver", "winusb", "--wdi", wdi, "--yes"]
+            run = FakeRun(fail={wdi: (0xFFFFFFF3, "", "")})
+            code, out, err, run = call(argv + ["--wcid"], run=run, admin=True)
+            self.assertEqual(code, 6)
+            self.assertIn("WCID", err)
+
     def test_interface_flags(self):
         with tempfile.TemporaryDirectory() as tmp:
             code, out, err, run = call(["install", "--vid", "0483", "--pid", "374B", "--iface", "0", "--driver", "libusb-win32",
@@ -361,6 +370,15 @@ class TestRestore(unittest.TestCase):
             if d["InstanceId"].startswith("USB\\VID_0483&PID_374B&MI_00"):
                 d.update(InfPath=inf, Provider=provider, Service=service)
         return out
+
+    def test_usbser_package_is_recognised_by_its_provider(self):
+        devs = devices.parse_device_list(json.dumps([dict(DEVICES[3], Service="usbser", InfPath="oem12.inf",
+                                                          Provider="libwdi", ProblemCode=10)]))
+        self.assertEqual(ops.restore_plan(devs[0], devs)[0][:3], ["pnputil", "/delete-driver", "oem12.inf"])
+        other = devices.parse_device_list(json.dumps([dict(DEVICES[3], Service="usbser", InfPath="oem12.inf",
+                                                           Provider="Someone", ProblemCode=0)]))
+        with self.assertRaises(ValueError):
+            ops.restore_plan(other[0], other)
 
     def test_execution_with_fake(self):
         original = self._with_probe_driver("input.inf", "Microsoft", "HidUsb")
