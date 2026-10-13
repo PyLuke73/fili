@@ -17,7 +17,7 @@ import tempfile
 import textwrap
 from typing import Callable, List, Optional
 
-from . import __version__, diagnose, extract, ops
+from . import __version__, diagnose, extract, licenses, ops
 from .config import SAMPLE, ConfigError, load_config
 from .devices import (AmbiguousError, NotFoundError, SelectionError, UsbDevice, filter_devices,
                       list_devices, parse_hex_id, select_target)
@@ -243,6 +243,11 @@ Examples:
   usbdrv cert-remove --thumbprint <40 hex> --dry-run  show what would be removed
   usbdrv cert-remove --thumbprint <40 hex> --yes      remove it (Administrator)
 """,
+    "licenses": """\
+Examples:
+  usbdrv licenses                       components and licenses (changes nothing)
+  usbdrv licenses --json                machine-readable output
+""",
     "sample-config": """\
 Examples:
   usbdrv sample-config > usbdrv.toml
@@ -323,6 +328,7 @@ def _build_parser() -> argparse.ArgumentParser:
     s.add_argument("--yes", action="store_true")
     s.add_argument("--dry-run", action="store_true")
 
+    add("licenses", help="list third-party components and their licenses (read-only)")
     add("sample-config", help="print a sample usbdrv.toml")
     return p
 
@@ -369,7 +375,7 @@ def main(argv: Optional[List[str]] = None, *, run: Optional[Callable] = None,
         return o.finish(args.cmd, EXIT_USAGE)
 
     if run is None:
-        if sys.platform != "win32" and args.cmd != "sample-config":
+        if sys.platform != "win32" and args.cmd not in ("sample-config", "licenses"):
             o.fail("usbdrv works on Windows only.")
             return o.finish(args.cmd, EXIT_ERROR)
         run = _default_run
@@ -402,6 +408,14 @@ def _dispatch(args, cfg, run, admin, env, o: Out, logger, setupapi_text) -> int:
     cmd = args.cmd
     if cmd == "sample-config":
         o.say(SAMPLE.rstrip())
+        return EXIT_OK
+
+    if cmd == "licenses":
+        o.data = licenses.COMPONENTS
+        for c in licenses.COMPONENTS:
+            o.say("%-42s %-52s %s" % (c["name"], c["license"], c["role"]))
+        o.say("")
+        o.say(licenses.NOTE)
         return EXIT_OK
 
     if cmd == "list":

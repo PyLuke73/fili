@@ -86,13 +86,38 @@ incorporati con la licenza di ciascuno, **che devi scrivere tu dopo averli verif
 - permettere al destinatario di ricostruire/sostituire la libreria (LGPL-3): documentare come ricompilare (`docs/building-wdi-simple.md`);
 - firmare e pubblicare gli hash dei binari (vedi checklist).
 
+### Decisione: sorgente da compilare, non binario
+
+Nel repository e nel pacchetto Python **non c'è nessun binario di terzi**: `wdi-simple.exe` si scarica e si compila con
+`scripts/fetch_wdi_deps.ps1` e `scripts/build_wdi_simple.sh` (`docs/building-wdi-simple.md`). Così gli obblighi sotto
+ricadono su chi compila e poi distribuisce il proprio binario, non su questo progetto. Un binario pronto si può offrire a
+parte (una "release" con il pacchetto di `package_wdi_bundle.py`) solo accettando gli obblighi della tabella seguente.
+**Sostituibilità (LGPL-3):** `wdi-simple.exe` resta un file separato che `usbdrv` lancia come programma esterno
+(`--wdi`, `$USBDRV_WDI`, config): chiunque può sostituirlo con una propria compilazione di libwdi senza toccare `usbdrv`.
+
+### Driver incorporabili (verificati il 13/10/2026; elenco completo in `docs/embedded-drivers.txt`)
+
+| Driver | Licenza | Cosa comporta ridistribuirlo |
+|---|---|---|
+| WinUSB: co-installer del WDK 8.0 (`WdfCoInstaller01011.dll`, `winusbcoinstaller2.dll`) | Microsoft Windows Driver Frameworks 1.11, «Distributable Code» | niente modifiche, solo Windows, avviso di copyright, **manleva verso Microsoft**, no licenze copyleft sul codice distribuito; servono solo a Windows vecchi (XP/Vista), non a 10/11 |
+| libusb-win32 1.4.0.0 | driver `libusb0.sys` **GPL**; libreria e installer LGPL | testo delle licenze e **sorgente corrispondente** di libusb-win32 1.4.0.0 |
+| libusbK 3.1.0.0 | doppia: **New BSD** o GPL, a scelta | scelta BSD: mantenere avviso e testo; il testo esatto va copiato dal repository (l'archivio binario non lo contiene) |
+| CDC (`usbser`) | driver di Windows | niente: non viene ridistribuito |
+
+**Come lo gestisce Zadig (solo comportamento osservato, nessun codice o testo copiato):** il programma ha una finestra di
+informazioni con i componenti e la licenza di ciascuno, il testo completo delle licenze, e dichiara che i driver sono
+ridistribuibili con i loro termini. Facciamo lo stesso in tre punti: (1) `docs/embedded-drivers.txt` finisce nel pacchetto come
+`THIRD_PARTY/embedded-drivers.txt`; (2) `usbdrv licenses` stampa componenti e licenze senza toccare il sistema; (3) i testi
+delle licenze stanno in `LICENSES/`. Strada che riduce gli obblighi: compilare `wdi-simple.exe` con **un solo gruppo di
+driver** (libwdi accetta anche solo `--with-libusbk`) e togliere dall'elenco gli altri.
+
 ## 5. Checklist "cosa devo fare al rilascio"
 
 - [x] Licenza MIT scelta: `LICENSE` e `license` in `pyproject.toml` fatti.
 - [ ] Controllare che il titolare del copyright («PyLuke73») sia quello voluto (nome reale o handle).
 - [ ] Verificare che nessun file contenga codice copiato da Zadig/libwdi (ricerca di commenti `Pete Batard`, `libwdi`, `LGPL`, `GPL`).
 - [x] `INF_TEMPLATE` riscritto dalla documentazione Microsoft (§1); da validare con `infverif` e con la prova di installazione.
-- [ ] Aggiornare `NOTICE` con le licenze **verificate** dei driver incorporati nel binario che si distribuisce.
+- [x] `NOTICE` e `docs/embedded-drivers.txt` con le licenze verificate dei driver (13/10/2026); da riverificare il testo BSD di libusbK dal repository prima di distribuire un binario.
 - [ ] Se si distribuisce `wdi-simple.exe`: usare `scripts/package_wdi_bundle.py` (testi LGPL/GPL, avviso, offerta e sorgente, versione e commit, istruzioni di ricostruzione, elenco dei driver verificati) e pubblicare `SHA256SUMS`.
 - [ ] Controllare che README e `--help` mostrino l'avviso di sicurezza (certificato autofirmato, amministratore, solo dispositivi propri).
 - [ ] Marcare nel README ciò che è stato provato davvero e ciò che no (`docs/piano-prove-installazione.md`).

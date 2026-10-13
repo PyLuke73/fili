@@ -1,0 +1,61 @@
+Drivers embedded in this wdi-simple.exe, and the license of each
+=================================================================
+
+This file is passed to scripts/package_wdi_bundle.py (--drivers-file) and is shipped as
+THIRD_PARTY/embedded-drivers.txt. It lists ONLY what the binary really contains: if you build wdi-simple.exe
+with fewer drivers (libwdi accepts any of --with-wdkdir, --with-libusb0, --with-libusbk), delete the entries
+you left out. Facts below were checked on 2026-10-13 against the files used for the reference build; it is
+not legal advice.
+
+usbdrv does not modify any of these files. libwdi copies them into the package it generates at run time.
+
+
+1. WinUSB co-installers (Microsoft Windows Driver Kit 8.0, redist\wdf)
+   Files   : WdfCoInstaller01011.dll, winusbcoinstaller2.dll (x86 and x64)
+   Licence : MICROSOFT SOFTWARE LICENSE TERMS - MICROSOFT WINDOWS DRIVER FRAMEWORKS 1.11
+             (License.rtf shipped with the WDK redistributables; the files are "Distributable Code"
+             listed in REDIST.TXT).
+   Main conditions for redistributing them (read the full text before distributing):
+     * add significant primary functionality to them in your program;
+     * distribute them without modification, only for the Windows platform;
+     * distributors and end users must accept terms that protect them at least as much as the Microsoft terms;
+     * display a valid copyright notice on your program;
+     * indemnify, defend and hold harmless Microsoft from claims related to your distribution;
+     * do not subject them to an "Excluded License" (a licence that requires source disclosure or the right
+       to modify as a condition of distribution).
+   Note    : the WinUSB driver itself (winusb.sys) is part of Windows and is NOT redistributed. The
+             co-installers matter only for old Windows versions (XP, Vista); they are not needed on 10/11.
+   Source  : https://go.microsoft.com/fwlink/p/?LinkID=253170 (SHA-256 of wdk-redist.msi:
+             29314207814ce9d5d73695f7e9239539cf37c79e750b9d5ea5a5ef5487a583d6)
+
+2. libusb-win32 1.4.0.0 (libusb0.sys, libusb0.dll, install-filter.exe)
+   Licence : driver (libusb0.sys): GNU General Public License (GPL);
+             library, test programs, installer: GNU Lesser General Public License (LGPL)
+             (as stated in installer_license.txt of libusb-win32-bin-1.4.0.0).
+   Copyright (c) 2002-2004 Stephan Meyer, 2000-2004 Johannes Erdfelt, 2000-2004 Thomas Sailer,
+             2010 Travis Robinson; see AUTHORS.txt.
+   Obligation: whoever redistributes the binary must also provide the corresponding source of libusb-win32
+             1.4.0.0 (https://github.com/mcuee/libusb-win32, tag release_1.4.0.0) and the licence texts
+             (LICENSES/GPL-3.0.txt, LICENSES/LGPL-3.0.txt).
+   Source  : https://github.com/mcuee/libusb-win32/releases/download/release_1.4.0.0/libusb-win32-bin-1.4.0.0.zip
+             (SHA-256: 9950b7a226e3ea387365c046d13b68bd0b0b18c015c034363601ff601c5b5585)
+   SHA-256 : libusb0.sys amd64 2e73f53ac43a337a122f3d055a7bcda1fee58ba75a7b0f168a66a3ee2e71a8b1
+             libusb0.sys x86   1898cb1e61ba4bb5bf752c0b1bbf2e1a5cc066ce82d7230e2c75e67892f49a9b
+
+3. libusbK 3.1.0.0 (libusbK.sys, libusbK.dll, libusb0.dll shim)
+   Licence : dual licence, New BSD option or GPL option, chosen by whoever redistributes
+             (https://github.com/mcuee/libusbk, "Licensing").
+   Chosen  : New BSD. Keep the copyright notice and licence text of libusbK with the binary.
+   Source  : https://github.com/mcuee/libusbk/releases/download/V3.1.0.0/libusbK-3.1.0.0-bin.7z
+             (SHA-256: 38605d8d5a86f408a4b7bec60f6d4a096050eee72f89a63a8d5be125252d3fe7)
+   SHA-256 : libusbK.sys amd64 1df66ff22e2eaec27180756d90926ca5b07e8bcf6b0e4e3c56471e63a3a05fa6
+             libusbK.sys x86   6265ae9ae5c49f515613f0b749ad8390a1b34ca326203318bffeb6c2c281d2d0
+   Not verified: the binary archive carries no licence file of its own; the BSD/GPL statement comes from the
+             project page. Copy the exact licence text from the libusbK repository for the tag used before
+             distributing.
+
+4. USB Serial (CDC)
+   usbser.sys is the in-box Windows driver; nothing from it is redistributed.
+
+Also inside wdi-simple.exe (not drivers): libwdi (LGPL-3.0-or-later), getopt (LGPL / GNU C Library),
+and the vendor-ID table vid_data.c generated from usb.ids (see THIRD_PARTY/libwdi-SOURCE.txt).

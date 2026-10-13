@@ -426,6 +426,20 @@ class TestEncoding(unittest.TestCase):
         out.flush()
 
 
+class TestLicenses(unittest.TestCase):
+    def test_lists_components_and_changes_nothing(self):
+        code, out, err, run = call(["licenses"])
+        self.assertEqual(code, 0)
+        for needle in ("MIT", "LGPL", "libusbK", "libusb-win32", "WinUSB", "Not legal advice"):
+            self.assertIn(needle, out)
+        self.assertEqual(run.calls, [])
+
+    def test_json(self):
+        code, out, err, run = call(["--json", "licenses"])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out)["data"][0]["name"], "usbdrv")
+
+
 class TestHelp(unittest.TestCase):
     def _parsers(self):
         main = cli._build_parser()

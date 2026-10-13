@@ -35,6 +35,7 @@ done by **libwdi** (`wdi-simple.exe`), used as a separate program (a subprocess,
 | `reinstall` | **yes** | puts back the driver currently bound |
 | `restore` / `uninstall` | **yes** | removes the OEM driver package of one device and lets Windows re-detect it |
 | `cert-remove` | **yes** (only with `--thumbprint`) | lists / removes the self-signed certificates created by libwdi |
+| `licenses` | no | third-party components and their licenses |
 | `sample-config` | no | prints a sample `usbdrv.toml` |
 
 Every command that changes the system needs `--yes`, needs Administrator rights, and supports `--dry-run`

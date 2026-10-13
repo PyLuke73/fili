@@ -22,9 +22,14 @@ processes, only if the user supplies them:
 Not used, not copied: Zadig (examples/zadig.c, GNU GPL v3 or later). Its behaviour was studied only to
 document which features usbdrv offers (docs/zadig-features.md).
 
-Driver binaries that libwdi may embed when YOU build it (to be verified at that time, they are
-not in this repository): WinUSB co-installers from the Windows Driver Kit (Microsoft redistribution
-terms), libusb-win32 (libusb0.sys), libusbK (libusbK.sys), usbser (in-box Windows driver).
-Each has its own license: list and verify them before distributing any binary.
+Driver binaries that libwdi may embed when YOU build it (not in this repository). Licenses checked on
+2026-10-13, details and SHA-256 in docs/embedded-drivers.txt:
+  * WinUSB co-installers from the Windows Driver Kit 8.0: Microsoft Windows Driver Frameworks 1.11 terms
+    (redistribution allowed with conditions, including an indemnity toward Microsoft).
+  * libusb-win32 1.4.0.0: driver libusb0.sys under the GPL, library and installer under the LGPL.
+  * libusbK 3.1.0.0: dual license, New BSD or GPL.
+  * usbser: in-box Windows driver, not redistributed.
+Run 'usbdrv licenses' to print this list. Before distributing a binary, list only the drivers it really
+contains (docs/embedded-drivers.txt) and follow docs/licenza.md section 4.
 
 usbdrv itself: MIT License, Copyright (c) 2026 PyLuke73 (see LICENSE and docs/licenza.md).
