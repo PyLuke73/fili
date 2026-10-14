@@ -14,5 +14,8 @@ classifiers = ["Operating System :: Microsoft :: Windows", "Environment :: Conso
 [project.scripts]
 usbdrv = "usbdrv.cli:main"
 
+[project.gui-scripts]
+usbdrv-gui = "usbdrv.gui:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
