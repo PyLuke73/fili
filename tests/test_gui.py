@@ -89,6 +89,17 @@ class TestGuiCore(unittest.TestCase):
             self.assertIn("--force", res.error)
             self.assertTrue(guicore.preview(argv + ["--force"], **kw(run, True)).ok)
 
+    def test_help_explains_every_button(self):
+        for word in ("Install", "Reinstall", "Restore", "Diagnose", "Certificates", "Licenses", "Save output",
+                     "Driver", "Name", "WCID", "Filter driver", "Force"):
+            self.assertIn(word, guicore.HELP_TEXT)
+
+    def test_about_has_version_license_and_credits(self):
+        from usbdrv import __version__
+        text = guicore.about_text()
+        for part in (__version__, "MIT", "Zadig", "libwdi", "libusbK", "libusb-win32", "Not legal advice"):
+            self.assertIn(part, text)
+
     def test_non_json_output_is_reported(self):
         res = guicore.call(["list"], main=lambda argv, out, err, **k: (out.write("not json"), 1)[1])
         self.assertFalse(res.ok)

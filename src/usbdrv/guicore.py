@@ -78,6 +78,69 @@ def apply(argv: List[str], main: Callable = cli.main, **kw) -> Result:
     return call(argv + ["--yes"], main, **kw)
 
 
+HELP_TEXT = """\
+usbdrv - what each part of the window does
+
+DEVICE LIST
+  Shows the USB devices and interfaces present now: VID:PID, interface (MI_xx, for composite devices), class,
+  the driver (Windows service) in use, the status and the name. 'Refresh' reads the list again; 'Show hubs'
+  also lists USB hubs. Select ONE row before using a button.
+
+OPTIONS
+  Driver        Driver to install: winusb (generic access, recommended), libusbk or libusb-win32 (libusb
+                applications), usbser (serial/CDC port; only for devices that really are CDC).
+  Name          Device name written in the driver package (optional).
+  WCID          Match the device by its WCID compatible ID. Works only on devices that advertise it.
+  Filter driver Attach libusb-win32 as a FILTER on top of the current driver (use with libusb-win32).
+                Some devices stop working with it: 'Restore' removes it.
+  Force         Allow changing devices in protected classes (keyboard, mouse, disk, Bluetooth...). Replacing
+                their driver can disable them: use it only if you are sure.
+
+BUTTONS
+  Install       Replaces the driver of the selected device/interface with the chosen one. The window first shows
+                the plan (nothing is changed), then asks you to confirm. Needs Administrator.
+  Reinstall     Installs again the same kind of driver the device already uses (WinUSB, libusbK...).
+  Restore       Undoes the change: removes the driver package created by usbdrv (and the libusb-win32 filter)
+                so that Windows binds the original driver again.
+  Diagnose      Explains why the driver of the selected device fails: problem code, setupapi.dev.log excerpt and
+                recent events. With no device selected it lists all devices that report a problem. Read-only.
+  Certificates  Lists the self-signed certificates created by libwdi in this PC's trusted stores (Root,
+                TrustedPublisher). Read-only. To remove one use the command line: usbdrv cert-remove.
+  Licenses      Shows the third-party components and their licenses. Read-only.
+  Save output   Saves the text of the lower box (plan, diagnosis, certificates, licenses) to a file.
+  Help / About  This text / version, license and credits.
+
+THE TEXT BOX
+  Shows the result of the last action, with the exit code. Right-click for Copy / Select all. Scroll bars
+  appear for long lines and long texts.
+
+GOOD TO KNOW
+  * Changes need Administrator. Without it the window is read-only; use 'Restart as Administrator'.
+  * Installing adds a SELF-SIGNED certificate to this PC's trusted stores. Remove it when you no longer
+    need the driver (usbdrv cert-remove).
+  * While a WinUSB/libusb driver is active, a storage device or camera is not available to Windows
+    until you press Restore.
+  * The same operations are available on the command line: run 'usbdrv --help'.
+"""
+
+
+def about_text() -> str:
+    """Version, license and credits (third-party components come from usbdrv.licenses)."""
+    from . import __version__, licenses
+    lines = ["usbdrv %s" % __version__,
+             "Replace the driver of a USB device or interface (Windows), from the command line or this window.",
+             "",
+             "Copyright (c) 2026 PyLuke73. Released under the MIT License (see LICENSE).",
+             "",
+             "Credits and third-party components",
+             "  usbdrv is inspired by Zadig (https://zadig.akeo.ie). No Zadig code was used (clean-room).",
+             "  The driver is installed by libwdi (https://libwdi.akeo.ie), run as a separate program."]
+    for c in licenses.COMPONENTS[1:]:
+        lines.append("  - %s: %s (%s)" % (c["name"], c["license"], c["role"]))
+    lines += ["", licenses.NOTE]
+    return "\n".join(lines)
+
+
 def is_admin() -> bool:
     return cli._default_is_admin()
 
