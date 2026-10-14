@@ -94,6 +94,20 @@ Il dispositivo usava gia' il WinUSB di Windows (`winusb.inf`, Microsoft, nessun 
 Pulizia: rimosso solo il certificato `CN=<telefono>`; i quattro preesistenti sono intatti. Il telefono non e' stato
 toccato (solo il driver sul PC).
 
+## 7. Quarta serie: dispositivo con bootloader di firmware `<bootloader>` (14/10/2026)
+
+Dispositivo senza driver (problema 28), bootloader di firmware. Caso classico da Zadig.
+
+| Prova | Esito | Note |
+|---|---|---|
+| `install --driver winusb` (da "nessun driver") | PASS | problema 0; il dispositivo resta presente e stabile (30 s) |
+| `restore` | **il dispositivo non torna** | `usbdrv` esce 0 e avvisa che il dispositivo non e' piu' elencato; subito dopo la rimozione del pacchetto Windows lo vede come `0000:0002`, "richiesta descrittore dispositivo non riuscita" (ripetuto 3 volte). Si risolve staccando e riattaccando il cavo, e il dispositivo torna senza driver (problema 28 -> OK senza servizio) |
+
+Isolato installando e ripristinando in due passi distinti: l'installazione non fa danni, il guasto compare con la
+rimozione del driver (`pnputil /delete-driver /uninstall /force`). E' un comportamento del dispositivo, non di usbdrv: dopo
+un cambio di driver Windows lo riavvia e il bootloader non risponde piu'. Il messaggio di `usbdrv` ora suggerisce di staccare
+e riattaccare il dispositivo. libusbK e libusb-win32 su questo dispositivo non ancora provati.
+
 ---
 
 **English summary.** Second set of real runs, on a **physical device**: the PC's built-in webcam (`<webcam>`,

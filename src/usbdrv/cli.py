@@ -507,7 +507,9 @@ def _post_check(dev: UsbDevice, expected_service: Optional[str], run, o: Out) ->
     """Re-read the device after a change and report its driver state; explain failures."""
     now = [d for d in list_devices(run) if d.instance_id.lower() == dev.instance_id.lower()]
     if not now:
-        o.say("note: the device is no longer listed (it may be re-enumerating).")
+        o.say("note: the device is no longer listed (it may be re-enumerating). If it does not come back within "
+              "a few seconds, unplug and replug it: some devices (e.g. firmware bootloaders) do not survive a "
+              "driver change and Windows then reports 'device descriptor request failed'.")
         return EXIT_OK
     d = now[0]
     o.say("after: driver '%s', status %s, problem %d (%s)" % (
