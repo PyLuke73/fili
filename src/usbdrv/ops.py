@@ -66,6 +66,43 @@ class Cert:
     subject: str
     not_after: str
 
+INSTANCE_SAFE_RE = re.compile(r"^[\w&.\\{}-]+$")
+FILTER_SERVICE = "libusb0"
+
+
+def filters_query_command(dev: UsbDevice) -> List[str]:
+    """Read-only: the UpperFilters of one device (a libusb-win32 'install --filter' adds 'libusb0' there)."""
+    if not INSTANCE_SAFE_RE.match(dev.instance_id):
+        raise ValueError("unexpected characters in the instance ID: %r" % dev.instance_id)
+    script = ("$ErrorActionPreference = 'SilentlyContinue'; "
+              "ConvertTo-Json -InputObject @((Get-PnpDeviceProperty -InstanceId '%s' "
+              "-KeyName DEVPKEY_Device_UpperFilters).Data) -Compress" % dev.instance_id)
+    return ["powershell", "-NoProfile", "-NonInteractive", "-Command", script]
+
+
+def upper_filters(run: Callable, dev: UsbDevice) -> List[str]:
+    res = run(filters_query_command(dev))
+    text = (res.stdout or "").strip()
+    if res.returncode != 0 or not text:
+        return []
+    data = json.loads(text)
+    return [str(f) for f in data if f] if isinstance(data, list) else ([str(data)] if data else [])
+
+
+def filter_removal_commands(dev: UsbDevice, filters: List[str]) -> List[List[str]]:
+    """Take 'libusb0' out of the device's UpperFilters (other filters are kept) and restart the device."""
+    if not INSTANCE_SAFE_RE.match(dev.instance_id):
+        raise ValueError("unexpected characters in the instance ID: %r" % dev.instance_id)
+    keep = [f for f in filters if f.lower() != FILTER_SERVICE]
+    key = "HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\%s" % dev.instance_id
+    if keep:
+        script = "Set-ItemProperty -LiteralPath '%s' -Name UpperFilters -Value ([string[]]@(%s))" % (
+            key, ",".join("'%s'" % f.replace("'", "''") for f in keep))
+    else:
+        script = "Remove-ItemProperty -LiteralPath '%s' -Name UpperFilters" % key
+    return [["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+            ["pnputil", "/restart-device", dev.instance_id]]
+
 
 def find_wdi(explicit: Optional[str], env: dict, base_dir: str) -> Optional[str]:
     """Locate wdi-simple.exe: --wdi / config, $USBDRV_WDI, PATH, <project>/build/."""

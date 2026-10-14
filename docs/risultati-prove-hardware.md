@@ -59,6 +59,26 @@ pianificata è partita comunque elevata): nessun danno, rientrava nello stesso t
 - Windows 10, Windows con Memory Integrity attiva o Secure Boot attivo, ARM64, Windows a 32 bit, altre lingue.
 - Dispositivi con interfaccia non video (qui l'unica prova fisica è una webcam), dispositivo scollegato durante l'installazione.
 
+## 5. Seconda serie: chiavetta USB e prova senza amministratore (14/10/2026)
+
+Dispositivo: chiavetta USB (archiviazione di massa), `<chiavetta>`, volume FAT32 con dati. Il contenuto non e' stato toccato
+(nessuna scrittura, nessuna formattazione); dopo ogni prova il volume e' tornato `Healthy`.
+
+| Prova | Esito | Note |
+|---|---|---|
+| `install --driver winusb` (senza `--force`) | PASS | la classe e' `USB`, non e' una classe protetta; il volume sparisce finche' dura WinUSB |
+| `restore` | PASS | torna `USBSTOR` / `usbstor.inf` / Microsoft, volume di nuovo presente e integro |
+| `install --driver libusb-win32 --filter` | **errore rilevato** | libusb0 si installa come filtro superiore, ma la chiavetta va in problema 39 (DRIVER_FAILED_LOAD); `usbdrv` esce con 6 e lo segnala. Causa del mancato caricamento non indagata |
+| `restore` dopo `--filter` | **difetto 5, corretto** | rifiutava ("not an OEM package") e il filtro restava. Ora `restore` rileva `libusb0` tra gli UpperFilters, lo toglie (gli altri filtri restano) e riavvia il dispositivo |
+| esecuzione **senza** amministratore | PASS | con UAC disattivato (`EnableLUA=0`) non esistono processi non elevati: provato con un token ristretto (`CreateRestrictedToken` LUA_TOKEN). `--dry-run` avvisa "NOT elevated" e esce 0; `--yes` esce 3 senza modificare nulla |
+| GUI (`usbdrv-gui`) | avvio verificato | lista dispositivi (circa 8 s); le azioni usano la CLI con anteprima e conferma; logica coperta da `tests/test_gui.py`. Non provate le azioni dalla finestra |
+
+Pulizia: nessun pacchetto libwdi rimasto; rimosso solo il certificato `CN=<chiavetta>`; i quattro certificati di
+altri strumenti sono intatti.
+
+Ancora **non** provati: due dispositivi identici (`--instance`, serve una seconda chiavetta identica), Windows 10, Memory
+Integrity, Secure Boot, ARM64/32 bit.
+
 ---
 
 **English summary.** Second set of real runs, on a **physical device**: the PC's built-in webcam (`<webcam>`,
@@ -68,3 +88,8 @@ libusbK, libusb-win32, `--name`, `usbser` (installs, the device reports problem 
 reproduced, probably the antivirus), `cert-remove` listing nothing when started from PowerShell 7 (the `Cert:` drive was
 missing: now uses `X509Store`), `restore` of a libwdi `usbser` package, clearer `--wcid` error. The system was restored to its
 initial state. Not tested: identical devices, `--filter`, non-elevated run, Windows 10 / HVCI / Secure Boot, ARM64.
+
+**Second series (14 Oct 2026).** USB flash drive `<chiavetta>`: WinUSB install/restore pass; `--filter` installs libusb0 as an
+upper filter and the drive reports problem 39 (reported, exit 6); `restore` could not undo it (defect 5, fixed:
+it now removes `libusb0` from UpperFilters and restarts the device). Non-elevated run verified with a restricted token
+(exit 3, dry-run warns). GUI starts and lists devices.

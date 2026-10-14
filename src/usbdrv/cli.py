@@ -577,7 +577,17 @@ def _cmd_install(args, cfg, dev, run, admin, env, o: Out) -> int:
 
 
 def _cmd_restore(args, dev, devs, run, admin, o: Out) -> int:
-    cmds = ops.restore_plan(dev, devs, args.force)
+    # 'install --filter' leaves libusb0 as an upper filter on the ORIGINAL driver: no OEM package to remove
+    filt = [f for f in ops.upper_filters(run, dev) if f.lower() == ops.FILTER_SERVICE]
+    try:
+        cmds = ops.restore_plan(dev, devs, args.force)
+    except ValueError:
+        if not filt:
+            raise
+        cmds = []
+    if filt:
+        o.say("note: the libusb-win32 filter driver (libusb0) is attached to this device: it will be removed.")
+        cmds = ops.filter_removal_commands(dev, ops.upper_filters(run, dev)) + cmds
     o.say("Target : " + _fmt_dev(dev))
     o.say("Package: " + dev.inf_path)
     o.say("Plan:")
