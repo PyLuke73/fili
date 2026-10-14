@@ -79,6 +79,21 @@ altri strumenti sono intatti.
 Ancora **non** provati: due dispositivi identici (`--instance`, serve una seconda chiavetta identica), Windows 10, Memory
 Integrity, Secure Boot, ARM64/32 bit.
 
+## 6. Terza serie: telefono Android `<telefono>` (14/10/2026)
+
+Il dispositivo usava gia' il WinUSB di Windows (`winusb.inf`, Microsoft, nessun pacchetto OEM). Cambiato solo il driver sul PC.
+
+| Prova | Esito | Note |
+|---|---|---|
+| `install --driver libusbk` | PASS | `libusbK` 3.1.0.0; il provider del pacchetto e' `libusbK`, non `libwdi` |
+| `reinstall` | PASS | secondo pacchetto (`oem191.inf`) |
+| `restore` | **difetto 6, corretto** | rimuoveva solo il pacchetto in uso: il dispositivo restava su libusbK con il primo (`oem181.inf`) e `usbdrv` diceva OK. Il ciclo dei pacchetti residui riconosceva solo il provider `libwdi`; ora conta anche il servizio (winusb, libusbk, libusb0) |
+| `restore` (con la correzione) | PASS | torna a `winusb.inf` / Microsoft, nessun pacchetto rimasto |
+| `install --driver libusb-win32` e `restore` | PASS | `libusb0` 1.4.0.0, poi di nuovo `winusb.inf` |
+
+Pulizia: rimosso solo il certificato `CN=<telefono>`; i quattro preesistenti sono intatti. Il telefono non e' stato
+toccato (solo il driver sul PC).
+
 ---
 
 **English summary.** Second set of real runs, on a **physical device**: the PC's built-in webcam (`<webcam>`,
@@ -93,3 +108,5 @@ initial state. Not tested: identical devices, `--filter`, non-elevated run, Wind
 upper filter and the drive reports problem 39 (reported, exit 6); `restore` could not undo it (defect 5, fixed:
 it now removes `libusb0` from UpperFilters and restarts the device). Non-elevated run verified with a restricted token
 (exit 3, dry-run warns). GUI starts and lists devices.
+
+**Third series.** Android phone `<telefono>` (in-box WinUSB): libusbK and libusb-win32 install/restore pass; after `reinstall`, `restore` left the device on the first libusbK package because only the `libwdi` provider was recognised (defect 6, fixed: the service counts too).

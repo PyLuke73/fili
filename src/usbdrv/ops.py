@@ -161,8 +161,14 @@ def install_command(wdi: str, dev: UsbDevice, driver: str, dest: str, *, name: O
 
 
 def is_libwdi_package(dev: UsbDevice) -> bool:
-    """True if the device is bound to an OEM package published by libwdi (what this tool installs)."""
-    return bool(OEM_INF_RE.match(dev.inf_path or "")) and (dev.provider or "").strip().lower() == "libwdi"
+    """True if the device is bound to an OEM package of the kind this tool installs.
+
+    The provider is 'libwdi' for WinUSB and usbser, but 'libusbK' / 'libusb-win32' for those drivers, so the
+    service (winusb, libusbk, libusb0) counts too.
+    """
+    if not OEM_INF_RE.match(dev.inf_path or ""):
+        return False
+    return (dev.provider or "").strip().lower() == "libwdi" or (dev.service or "").lower() in LIBWDI_SERVICES
 
 
 def restore_plan(dev: UsbDevice, all_devices: List[UsbDevice], force: bool = False) -> List[List[str]]:
