@@ -1,4 +1,4 @@
-"""Third-party components and their licenses, for 'usbdrv licenses'. Read-only: prints data, touches nothing."""
+"""Componenti di terze parti e relative licenze, per 'usbdrv licenses'. Sola lettura: stampa dati, non tocca nulla."""
 
 COMPONENTS = [
     {"name": "usbdrv", "license": "MIT", "role": "this program", "redistributed": True},

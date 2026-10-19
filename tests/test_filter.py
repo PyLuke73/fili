@@ -1,6 +1,6 @@
-"""Tests of 'restore' on a device that only has the libusb-win32 filter (install --filter). Nothing touches the system.
+"""Test di 'restore' su un dispositivo che ha solo il filtro libusb-win32 (install --filter). Nulla tocca il sistema.
 
-Run:  python -I tests/test_filter.py        (from the repository root)
+Esecuzione:  python -I tests/test_filter.py        (dalla radice del repository)
 """
 
 import json
@@ -13,7 +13,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
 
-from test_usbdrv import FakeRun, call  # noqa: E402  (also disables the real runner)
+from test_usbdrv import FakeRun, call  # noqa: E402  (disattiva anche l'esecutore vero)
 
 from usbdrv import ops  # noqa: E402
 

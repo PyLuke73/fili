@@ -1,4 +1,4 @@
-"""Enumeration and selection of USB devices/interfaces (read-only)."""
+"""Elenco e selezione dei dispositivi/interfacce USB (sola lettura)."""
 
 import json
 import re
@@ -42,7 +42,7 @@ ConvertTo-Json -InputObject $rows -Compress
 
 
 class SelectionError(Exception):
-    """The VID/PID/interface request does not identify exactly one device."""
+    """La richiesta VID/PID/interfaccia non identifica esattamente un dispositivo."""
 
 
 class NotFoundError(SelectionError):
@@ -90,7 +90,7 @@ class UsbDevice:
 
 
 def parse_hex_id(text: str, what: str = "ID") -> int:
-    """Accept '0483', '0x0483', '483'. Return an int in 0..0xFFFF."""
+    """Accetta '0483', '0x0483', '483'. Restituisce un int in 0..0xFFFF."""
     t = text.strip().lower()
     if t.startswith("0x"):
         t = t[2:]
@@ -107,7 +107,7 @@ def _to_int(v) -> Optional[int]:
 
 
 def parse_device_list(json_text: str) -> List[UsbDevice]:
-    """Parse the JSON produced by LIST_SCRIPT. Entries without VID/PID (root hubs...) are skipped."""
+    """Interpreta il JSON prodotto da LIST_SCRIPT. Le voci senza VID/PID (root hub...) vengono saltate."""
     json_text = (json_text or "").strip()
     if not json_text:
         return []
@@ -143,7 +143,7 @@ def parse_device_list(json_text: str) -> List[UsbDevice]:
 
 
 def list_devices(run: Callable) -> List[UsbDevice]:
-    """Read-only: ask PowerShell for the present USB devices."""
+    """Sola lettura: chiede a PowerShell i dispositivi USB presenti."""
     res = run(["powershell", "-NoProfile", "-NonInteractive", "-Command", LIST_SCRIPT])
     if res.returncode != 0:
         raise RuntimeError("device enumeration failed: %s" % (res.stderr or "").strip())
@@ -153,11 +153,11 @@ def list_devices(run: Callable) -> List[UsbDevice]:
 def filter_devices(devices: List[UsbDevice], only_no_driver: bool = False,
                    include_hubs: bool = False, include_parents: bool = True,
                    trim: bool = False) -> List[UsbDevice]:
-    """Zadig-like listing filters.
+    """Filtri dell'elenco, come in Zadig.
 
-    only_no_driver  : keep devices without a driver (Zadig's default view)
-    include_hubs    : keep USB hubs (Zadig: 'Ignore Hubs or Composite Parents' unchecked)
-    include_parents : keep composite parents (devices that also have MI_xx children)
+    only_no_driver  : tiene i dispositivi senza driver (la vista predefinita di Zadig)
+    include_hubs    : tiene gli hub USB (Zadig: 'Ignore Hubs or Composite Parents' non selezionato)
+    include_parents : tiene i genitori compositi (dispositivi che hanno anche figli MI_xx)
     """
     out = []
     for d in devices:
@@ -181,7 +181,7 @@ def _replace_name(d: UsbDevice, name: str) -> UsbDevice:
 
 def select_target(devices: List[UsbDevice], vid: int, pid: int,
                   iface: Optional[int] = None, instance: Optional[str] = None) -> UsbDevice:
-    """Return exactly one device/interface or raise NotFoundError / AmbiguousError."""
+    """Restituisce esattamente un dispositivo/interfaccia oppure solleva NotFoundError / AmbiguousError."""
     if instance is not None:
         found = [d for d in devices if d.instance_id.lower() == instance.lower()]
         if len(found) != 1:

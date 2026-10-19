@@ -120,6 +120,12 @@ The tests never touch the system (a fake command runner; the real one is replace
 Clean-room note: Zadig's source (GPL-3.0-or-later) was not copied or adapted; libwdi/wdi-simple (LGPL-3.0-or-later) is only
 run as an external program.
 
+## Support the project
+
+usbdrv is free software. If it saved you time, you can support its development with a donation on
+**[Ko-fi](https://ko-fi.com/lucacolombo35186)** (there is a ☕ button in the GUI too). Donations are optional and do not
+change the license or give any warranty.
+
 ---
 
 # usbdrv (italiano)
@@ -153,3 +159,7 @@ INF non firmato per ispezione e **non crea certificati**. `install` richiede `wd
 (es. 10, 28, 43, 52), l'NTSTATUS, il driver corrente e le righe di `setupapi.dev.log` relative al dispositivo.
 
 **Test:** `python -I tests/test_usbdrv.py` e `python -I tests/test_bundle.py` (non toccano il sistema).
+
+**Supporta il progetto:** usbdrv è software libero. Se ti è stato utile puoi sostenerlo con una donazione su
+**[Ko-fi](https://ko-fi.com/lucacolombo35186)** (nella GUI c'è anche il pulsante ☕). La donazione è facoltativa e non
+cambia la licenza né dà alcuna garanzia.

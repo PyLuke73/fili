@@ -1,13 +1,14 @@
-"""Try every driver on ONE real device and put it back; print a table and keep a log.
+"""Prova ogni driver su UN dispositivo reale e lo rimette a posto; stampa una tabella e tiene un log.
 
-Meant for the platform tests (Memory Integrity on, Secure Boot on, Windows 10, ...): run it in an ELEVATED terminal
-from the repository root, with a device you can afford to switch for a minute (not your keyboard, mouse or boot disk):
+Pensato per le prove di piattaforma (Integrità della memoria attiva, Secure Boot attivo, Windows 10, ...): va eseguito
+in un terminale con privilegi di AMMINISTRATORE, dalla radice del repository, con un dispositivo che si può permettere
+di cambiare per un minuto (non tastiera, mouse o disco di avvio):
 
     python scripts/driver_matrix.py --vid 0E8D --pid 201C [--iface N] [--instance ID]
 
-For each driver (winusb, libusbk, libusb-win32) it runs install --yes, reads the state, then restore --yes.
-At the end it removes only the libwdi certificates that did not exist when it started.
-It also prints the platform facts that matter (Memory Integrity, Secure Boot, Windows build).
+Per ogni driver (winusb, libusbk, libusb-win32) esegue install --yes, legge lo stato, poi restore --yes.
+Alla fine rimuove solo i certificati libwdi che non esistevano quando è partito.
+Stampa anche i dati di piattaforma che contano (Integrità della memoria, Secure Boot, build di Windows).
 """
 
 import argparse
@@ -25,7 +26,7 @@ DRIVERS = ("winusb", "libusbk", "libusb-win32")
 
 
 def usbdrv(argv, log):
-    """Run the CLI in-process with --json; returns (exit code, document)."""
+    """Esegue la CLI nello stesso processo con --json; restituisce (codice di uscita, documento)."""
     import io
     out, err = io.StringIO(), io.StringIO()
     code = cli.main(["--json", "--log-file", log] + argv, out=out, err=err)
@@ -53,7 +54,7 @@ def platform_facts():
 
 
 def ci_events(since):
-    """Code Integrity events (blocked drivers) since a timestamp."""
+    """Eventi di Code Integrity (driver bloccati) da un dato istante in poi."""
     script = ("Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-CodeIntegrity/Operational'; "
               "StartTime=[datetime]'@SINCE@'} -ErrorAction SilentlyContinue | Where-Object { $_.Id -in 3023,3033,3034,3076,3077 } | "
               "ForEach-Object { '{0} id={1} {2}' -f $_.TimeCreated, $_.Id, ($_.Message -split \"`n\")[0] }")
@@ -113,7 +114,7 @@ def main():
     events = ci_events(start)
     print("\nCode Integrity events during the run:\n" + (events or "  none"))
 
-    # remove only the certificates created by this run
+    # rimuove solo i certificati creati da questa esecuzione
     for c in (usbdrv(["cert-remove"], a.log)[1].get("data") or []):
         if (c["store"], c["thumbprint"]) not in certs_before:
             usbdrv(["cert-remove", "--thumbprint", c["thumbprint"], "--yes"], a.log)

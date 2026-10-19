@@ -1,11 +1,11 @@
-"""Side-effect-free driver package extraction (INF only, no catalog, no certificate).
+"""Estrazione del pacchetto driver senza effetti collaterali (solo INF, niente catalogo, niente certificato).
 
-Stock wdi-simple cannot do this safely: its extract mode still creates a self-signed
-certificate and adds it to the machine's trusted stores. This module writes an UNSIGNED
-INF itself, only into a directory chosen by the user, and never touches the system.
+Il wdi-simple originale non può farlo in sicurezza: anche in modalità di estrazione crea un
+certificato autofirmato e lo aggiunge agli archivi attendibili del computer. Questo modulo scrive
+da solo un INF NON FIRMATO, soltanto in una cartella scelta dall'utente, e non tocca mai il sistema.
 
-Supported: WinUSB (the INF uses the in-box winusb.inf, no binaries are needed).
-libusbK / libusb-win32 / CDC need driver binaries, so they are refused here.
+Supportato: WinUSB (l'INF usa il winusb.inf incluso in Windows, non servono binari).
+libusbK / libusb-win32 / CDC richiedono binari del driver, quindi qui vengono rifiutati.
 """
 
 import os
@@ -15,15 +15,15 @@ from typing import Optional
 from .devices import UsbDevice
 from .ops import clean_name
 
-# Provenance: written from the structure documented by Microsoft in "WinUSB (Winusb.sys)
-# Installation" (Windows Driver docs, sample INF that binds a device to the in-box WinUSB
-# driver through Include/Needs = winusb.inf). The section names and directives are the
-# documented ones, so they are dictated by the INF format; the text, the comments and the
-# values are ours. Targets Windows 10/11 (the USBDevice class and winusb.inf are in-box, so
-# no ClassInstall32 section and no co-installers; the service and the KMDF section come from
-# winusb.inf through Needs = WINUSB.NT and WINUSB.NT.Services, the same way Windows' own
-# INFs for WinUSB devices use it, so no AddService/Wdf sections are repeated here). The file libwdi/winusb.inf.in was NOT
-# consulted for this template.
+# Provenienza: scritto a partire dalla struttura documentata da Microsoft in "WinUSB (Winusb.sys)
+# Installation" (documentazione Windows Driver, INF di esempio che associa un dispositivo al WinUSB incluso in
+# Windows tramite Include/Needs = winusb.inf). I nomi delle sezioni e le direttive sono quelli
+# documentati, quindi sono imposti dal formato INF; il testo, i commenti e i
+# valori sono nostri. Per Windows 10/11 (la classe USBDevice e winusb.inf sono incluse in Windows, quindi
+# niente sezione ClassInstall32 e niente co-installer; il servizio e la sezione KMDF arrivano da
+# winusb.inf tramite Needs = WINUSB.NT e WINUSB.NT.Services, nello stesso modo in cui gli INF
+# di Windows per i dispositivi WinUSB li usano, quindi qui non si ripetono sezioni AddService/Wdf). Il file libwdi/winusb.inf.in NON e'
+# stato consultato per questo modello.
 INF_TEMPLATE = """\
 ; usbdrv: UNSIGNED driver package for inspection only.
 ; It has no catalog file, so 64-bit Windows will not install it as is.
@@ -76,9 +76,9 @@ def hardware_id(dev: UsbDevice, wcid: bool) -> str:
 def render_inf(dev: UsbDevice, *, name: Optional[str] = None, wcid: bool = False,
                date: str = "01/01/2024", guid: Optional[str] = None) -> str:
     guid = guid or "{%s}" % str(uuid.uuid4())
-    # Only the section that is used goes into the file (infverif warns about unreferenced sections).
+    # Nel file entra solo la sezione usata (infverif segnala le sezioni non referenziate).
     if wcid:
-        hw_block = ""            # WCID device: the interface GUID comes from the device's own descriptors
+        hw_block = ""            # Dispositivo WCID: il GUID dell'interfaccia viene dai descrittori del dispositivo stesso
     else:
         hw_block = ("[Install.HW]\n"
                     "AddReg = AddInterfaceGuid\n"
@@ -92,7 +92,7 @@ def render_inf(dev: UsbDevice, *, name: Optional[str] = None, wcid: bool = False
 
 def extract_package(dev: UsbDevice, out_dir: str, driver: str, *, name: Optional[str] = None,
                     wcid: bool = False) -> str:
-    """Write <out_dir>/usbdrv.inf and return its path. Creates nothing else."""
+    """Scrive <out_dir>/usbdrv.inf e ne restituisce il percorso. Non crea nient'altro."""
     if driver != "winusb":
         raise ValueError("extract supports only the winusb driver (others need driver binaries "
                          "and are produced by libwdi at install time)")

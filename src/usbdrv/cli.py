@@ -1,9 +1,9 @@
-"""usbdrv command line.
+"""Riga di comando di usbdrv.
 
-Exit codes
-  0 ok            1 unexpected error      2 invalid arguments / refused by a safety rule
-  3 not admin     4 device not found      5 ambiguous device (several / composite)
-  6 driver error  7 cancelled (no --yes)
+Codici di uscita
+  0 ok            1 errore imprevisto     2 argomenti non validi / rifiutato da una regola di sicurezza
+  3 non admin     4 dispositivo non trovato   5 dispositivo ambiguo (più di uno / composito)
+  6 errore driver  7 annullato (senza --yes)
 """
 
 import argparse
@@ -48,12 +48,12 @@ WARNING - read before continuing
 
 RESTORE_MAX_PASSES = 5
 
-# libwdi returns WDI_ERROR_NEEDS_ADMIN (-15) when it cannot start its installer process. Besides a missing
-# elevation this was seen once on a PC with a third-party antivirus, on the very first run of a freshly
-# extracted installer; it did not happen again.
+# libwdi restituisce WDI_ERROR_NEEDS_ADMIN (-15) quando non riesce ad avviare il proprio processo di installazione. Oltre a
+# una mancata elevazione, è successo una volta su un PC con un antivirus di terze parti, alla primissima esecuzione di un
+# installer appena estratto; non si è ripetuto.
 WDI_NEEDS_ADMIN = (-15, 0xFFFFFFF1)
-# libwdi returns WDI_ERROR_EXISTS (-13) when Windows finds no driver to update for the device; with --wcid this
-# is what happens on a device that does not advertise the WCID compatible ID.
+# libwdi restituisce WDI_ERROR_EXISTS (-13) quando Windows non trova nessun driver da aggiornare per il dispositivo; con --wcid
+# succede su un dispositivo che non dichiara il compatible ID WCID.
 WDI_EXISTS = (-13, 0xFFFFFFF3)
 
 ADMIN_HELP = """Administrator rights are required. Open an elevated terminal and run the same command again:
@@ -62,7 +62,7 @@ ADMIN_HELP = """Administrator rights are required. Open an elevated terminal and
 
 
 def _oem_codec() -> str:
-    """Code page used by console programs (pnputil, powershell) when their output is piped."""
+    """Code page usata dai programmi console (pnputil, powershell) quando il loro output viene rediretto."""
     try:
         return "cp%d" % ctypes.windll.kernel32.GetOEMCP()
     except Exception:
@@ -70,8 +70,8 @@ def _oem_codec() -> str:
 
 
 def decode_output(data: bytes) -> str:
-    """Decode the output of a child process: UTF-8 if it is valid, otherwise the OEM code page
-    (pnputil prints localized text such as accented letters in cp850), never failing."""
+    """Decodifica l'output di un processo figlio: UTF-8 se valido, altrimenti la code page OEM
+    (pnputil stampa il testo localizzato, ad esempio le lettere accentate, in cp850), senza mai fallire."""
     if not data:
         return ""
     try:
@@ -92,8 +92,8 @@ def _default_run(cmd: List[str]):
 
 
 def _safe_streams(*streams) -> None:
-    """A redirected stdout/stderr can have a code page (cp1252, cp850...) that cannot encode every
-    character in the messages we print (including text coming from Windows tools): replace, never crash."""
+    """Uno stdout/stderr rediretto può avere una code page (cp1252, cp850...) che non sa codificare tutti i
+    caratteri dei messaggi che stampiamo (anche il testo che arriva dagli strumenti di Windows): sostituisce, non va mai in crash."""
     for s in streams:
         try:
             s.reconfigure(errors="replace")
@@ -123,7 +123,7 @@ def _fmt_dev(d: UsbDevice) -> str:
 
 
 class Out:
-    """Collects human messages and structured data; prints either text or one JSON object."""
+    """Raccoglie i messaggi per l'utente e i dati strutturati; stampa testo oppure un solo oggetto JSON."""
 
     def __init__(self, stream, err, json_mode: bool, silent: bool):
         self.stream, self.err, self.json_mode, self.silent = stream, err, json_mode, silent
@@ -474,7 +474,7 @@ def _dispatch(args, cfg, run, admin, env, o: Out, logger, setupapi_text) -> int:
 
 
 def _gate(args, admin, o: Out) -> Optional[int]:
-    """Common checks before executing anything that changes the system. None = go ahead."""
+    """Controlli comuni prima di eseguire qualsiasi cosa che modifichi il sistema. None = si può procedere."""
     if args.dry_run:
         o.say("\n[dry-run] nothing executed.")
         if not admin():
@@ -504,7 +504,7 @@ def _execute(cmds: List[List[str]], run, o: Out) -> int:
 
 
 def _post_check(dev: UsbDevice, expected_service: Optional[str], run, o: Out) -> int:
-    """Re-read the device after a change and report its driver state; explain failures."""
+    """Rilegge il dispositivo dopo una modifica e riporta lo stato del driver; spiega i fallimenti."""
     now = [d for d in list_devices(run) if d.instance_id.lower() == dev.instance_id.lower()]
     if not now:
         o.say("note: the device is no longer listed (it may be re-enumerating). If it does not come back within "
@@ -579,7 +579,7 @@ def _cmd_install(args, cfg, dev, run, admin, env, o: Out) -> int:
 
 
 def _cmd_restore(args, dev, devs, run, admin, o: Out) -> int:
-    # 'install --filter' leaves libusb0 as an upper filter on the ORIGINAL driver: no OEM package to remove
+    # 'install --filter' lascia libusb0 come filtro superiore sul driver ORIGINALE: nessun pacchetto OEM da rimuovere
     filt = [f for f in ops.upper_filters(run, dev) if f.lower() == ops.FILTER_SERVICE]
     try:
         cmds = ops.restore_plan(dev, devs, args.force)
@@ -601,9 +601,9 @@ def _cmd_restore(args, dev, devs, run, admin, o: Out) -> int:
     code = _execute(cmds, run, o)
     if code != EXIT_OK:
         return code
-    # After a 'reinstall' (or a repeated install) the driver store can hold SEVERAL libwdi packages for the
-    # same device. Removing the bound one makes Windows bind the next one, so the device would still not be
-    # back on its original driver: remove the leftovers too, a few passes at most.
+    # Dopo un 'reinstall' (o un'installazione ripetuta) il driver store può contenere PIÙ pacchetti libwdi per lo
+    # stesso dispositivo. Rimuovere quello associato fa associare a Windows il successivo, quindi il dispositivo non
+    # tornerebbe sul driver originale: rimuove anche gli avanzi, al massimo in qualche passata.
     for _ in range(RESTORE_MAX_PASSES):
         now = [d for d in list_devices(run) if d.instance_id.lower() == dev.instance_id.lower()]
         if not now or not ops.is_libwdi_package(now[0]):

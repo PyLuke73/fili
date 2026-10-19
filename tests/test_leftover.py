@@ -1,7 +1,7 @@
-"""Regression: 'restore' must remove EVERY leftover package, also those whose provider is not 'libwdi'
-(libusbK and libusb-win32 packages are published under their own name). Nothing touches the system.
+"""Regressione: 'restore' deve rimuovere OGNI pacchetto residuo, anche quelli il cui provider non è 'libwdi'
+(i pacchetti libusbK e libusb-win32 sono pubblicati con il proprio nome). Nulla tocca il sistema.
 
-Run:  python -I tests/test_leftover.py        (from the repository root)
+Esecuzione:  python -I tests/test_leftover.py        (dalla radice del repository)
 """
 
 import os
@@ -13,7 +13,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
 
-from test_usbdrv import FakeRun, call  # noqa: E402  (also disables the real runner)
+from test_usbdrv import FakeRun, call  # noqa: E402  (disattiva anche l'esecutore vero)
 
 from usbdrv import devices, ops  # noqa: E402
 

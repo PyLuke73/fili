@@ -1,14 +1,14 @@
-"""Build a redistribution bundle for a wdi-simple.exe you compiled, with the LGPL paperwork.
+"""Costruisce un pacchetto di ridistribuzione per un wdi-simple.exe compilato da te, con la documentazione LGPL.
 
-usbdrv itself does not ship wdi-simple.exe. If YOU want to hand a binary to someone else, run this
-script: it refuses to produce a bundle unless the legal material is in place, and it adds
-  * the LGPL-3.0 and GPL-3.0 texts (LICENSES/),
-  * NOTICE and a THIRD_PARTY/libwdi-SOURCE.txt with the exact version, copyright and a written offer,
-  * the corresponding source archive of libwdi (downloaded from GitHub, or given with --source-archive),
-  * the build instructions (docs/building-wdi-simple.md),
-  * the list of embedded drivers and their licenses (you must provide it with --drivers-file),
-  * SHA256SUMS for every file.
-It does not install anything and does not touch the system. This is not legal advice.
+usbdrv in se' non distribuisce wdi-simple.exe. Se VUOI consegnare un binario a qualcun altro, esegui questo
+script: rifiuta di produrre il pacchetto se il materiale legale non è a posto, e aggiunge
+  * i testi LGPL-3.0 e GPL-3.0 (LICENSES/),
+  * NOTICE e un THIRD_PARTY/libwdi-SOURCE.txt con la versione esatta, il copyright e un'offerta scritta,
+  * l'archivio dei sorgenti corrispondente di libwdi (scaricato da GitHub, o indicato con --source-archive),
+  * le istruzioni di compilazione (docs/building-wdi-simple.md),
+  * l'elenco dei driver incorporati e delle loro licenze (da fornire con --drivers-file),
+  * SHA256SUMS per ogni file.
+Non installa nulla e non tocca il sistema. Non è una consulenza legale.
 
 Usage:
   python -I scripts/package_wdi_bundle.py --exe path/to/wdi-simple.exe --out dist/wdi-bundle \
@@ -24,7 +24,7 @@ import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_TAG = "v1.5.1"
-DEFAULT_COMMIT = "9b23b82a2dd1cbffc16d46c212f92c6bf8c0c602"   # commit of tag v1.5.1 (checked on GitHub)
+DEFAULT_COMMIT = "9b23b82a2dd1cbffc16d46c212f92c6bf8c0c602"   # commit del tag v1.5.1 (verificato su GitHub)
 REPO = "https://github.com/pbatard/libwdi"
 
 REQUIRED = ["LICENSES/LGPL-3.0.txt", "LICENSES/GPL-3.0.txt", "NOTICE", "LICENSE",
@@ -87,8 +87,8 @@ def build_bundle(exe, out, drivers_file, tag=DEFAULT_TAG, commit=DEFAULT_COMMIT,
     if os.path.exists(out) and os.listdir(out):
         raise BundleError("output directory is not empty: %s" % out)
 
-    # Build in a sibling temporary directory and rename only at the end, so that a failure never
-    # leaves a half-made bundle (for instance an exe without its source) in the output directory.
+    # Costruisce in una cartella temporanea accanto e rinomina solo alla fine, così un errore non lascia mai
+    # un pacchetto a metà (ad esempio un exe senza i suoi sorgenti) nella cartella di destinazione.
     final = os.path.abspath(out)
     out = final + ".partial"
     if os.path.exists(out):
@@ -99,7 +99,7 @@ def build_bundle(exe, out, drivers_file, tag=DEFAULT_TAG, commit=DEFAULT_COMMIT,
         shutil.rmtree(out, ignore_errors=True)
         raise
     if os.path.isdir(final):
-        os.rmdir(final)                      # it was empty (checked above)
+        os.rmdir(final)                      # era vuota (verificato sopra)
     os.replace(out, final)
     return final
 
@@ -111,7 +111,7 @@ def _fill(exe, out, drivers_file, tag, commit, source_archive, download, root):
     os.makedirs(os.path.join(out, "docs"), exist_ok=True)
 
     shutil.copy2(exe, os.path.join(out, "wdi-simple.exe"))
-    # every license text of the repository (LGPL, GPL, and the BSD text of libusbK) goes with the binary
+    # ogni testo di licenza del repository (LGPL, GPL e il testo BSD di libusbK) accompagna il binario
     lic_dir = os.path.join(root, "LICENSES")
     for name in sorted(os.listdir(lic_dir)):
         if os.path.isfile(os.path.join(lic_dir, name)):

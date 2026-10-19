@@ -1,3 +1,3 @@
-"""usbdrv: replace the driver of a USB device/interface from the command line (Windows)."""
+"""usbdrv: sostituisce il driver di un dispositivo/interfaccia USB da riga di comando (Windows)."""
 
 __version__ = "0.1.0"

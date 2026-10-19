@@ -1,5 +1,5 @@
-"""Tests for scripts/package_wdi_bundle.py. They use a dummy file called wdi-simple.exe in a
-temporary directory: no real binary, no network, nothing is installed."""
+"""Test per scripts/package_wdi_bundle.py. Usano un file finto chiamato wdi-simple.exe in una
+cartella temporanea: nessun binario vero, nessuna rete, nulla viene installato."""
 
 import hashlib
 import importlib.util
@@ -58,20 +58,20 @@ class TestBundle(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             exe, drv, src = make(tmp)
             out = os.path.join(tmp, "b")
-            # no drivers list
+            # nessun elenco dei driver
             self.assertEqual(pb.main(["--exe", exe, "--out", out, "--source-archive", src]), 2)
-            # empty drivers list
+            # elenco dei driver vuoto
             empty = os.path.join(tmp, "e.txt"); open(empty, "w").write("x")
             self.assertEqual(pb.main(["--exe", exe, "--out", out, "--drivers-file", empty, "--source-archive", src]), 2)
-            # no source and no download: the LGPL source is mandatory
+            # niente sorgenti e niente download: i sorgenti LGPL sono obbligatori
             self.assertEqual(pb.main(["--exe", exe, "--out", out, "--drivers-file", drv, "--no-download"]), 2)
-            # wrong executable name
+            # nome dell'eseguibile sbagliato
             other = os.path.join(tmp, "other.exe"); open(other, "wb").write(b"x")
             self.assertEqual(pb.main(["--exe", other, "--out", out, "--drivers-file", drv, "--source-archive", src]), 2)
-            # missing exe
+            # exe mancante
             self.assertEqual(pb.main(["--exe", os.path.join(tmp, "nope.exe"), "--out", out,
                                       "--drivers-file", drv, "--source-archive", src]), 2)
-            # another tag without its commit
+            # un altro tag senza il suo commit
             self.assertEqual(pb.main(["--exe", exe, "--out", out, "--drivers-file", drv, "--source-archive", src,
                                       "--libwdi-tag", "v1.6.0"]), 2)
             self.assertFalse(os.path.exists(os.path.join(out, "wdi-simple.exe")))

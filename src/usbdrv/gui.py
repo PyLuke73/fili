@@ -1,12 +1,13 @@
-"""usbdrv-gui: a small window over the same operations as the command line (tkinter, no extra dependency).
+"""usbdrv-gui: una piccola finestra sulle stesse operazioni della riga di comando (tkinter, nessuna dipendenza in più).
 
-The window always shows the dry-run plan and asks for confirmation before the real run; the real run is the
-CLI with --yes, so every safety rule of the CLI applies unchanged.
+La finestra mostra sempre il piano della prova (dry-run) e chiede conferma prima dell'esecuzione vera; l'esecuzione
+vera è la CLI con --yes, quindi ogni regola di sicurezza della CLI vale senza modifiche.
 """
 
 import sys
 import threading
 import tkinter as tk
+import webbrowser
 from tkinter import filedialog, messagebox, ttk
 from typing import Callable, List, Optional
 
@@ -20,7 +21,7 @@ WARNING = ("This replaces the driver of the selected device and adds a self-sign
 
 
 def scrolled(parent, widget) -> ttk.Frame:
-    """Put a Text/Treeview in a frame with vertical and horizontal scroll bars; the caller packs the frame."""
+    """Mette un Text/Treeview in un frame con barre di scorrimento verticale e orizzontale; il frame va posizionato da chi chiama."""
     frame = ttk.Frame(parent)
     frame.rowconfigure(0, weight=1)
     frame.columnconfigure(0, weight=1)
@@ -39,7 +40,7 @@ def copy_to_clipboard(widget, text: str) -> None:
 
 
 def make_text(parent, height: int = 12, wrap: str = "none") -> tk.Text:
-    """A read-only Text with a right-click menu (Copy the selection / Select all)."""
+    """Un Text in sola lettura con menu contestuale (Copia la selezione / Seleziona tutto)."""
     text = tk.Text(parent, height=height, wrap=wrap, state="disabled")
     menu = tk.Menu(text, tearoff=False)
 
@@ -91,6 +92,7 @@ class App(tk.Tk):
         top = ttk.Frame(self, padding=6)
         top.pack(fill="x")
         self.hubs = tk.BooleanVar(value=False)
+        ttk.Button(top, text="☕ Ko-fi", width=9, command=self.donate).pack(side="right", padx=(8, 0))
         ttk.Button(top, text="Refresh", command=self.refresh).pack(side="right")
         ttk.Checkbutton(top, text="Show hubs", variable=self.hubs, command=self.refresh).pack(side="right", padx=8)
         if not guicore.is_admin():
@@ -139,7 +141,7 @@ class App(tk.Tk):
         self.build_menu()
         self.refresh()
 
-    # -- menu, help, about, save, copy ---------------------------------------------------------
+    # -- menu, aiuto, informazioni, salva, copia -----------------------------------------------
     def build_menu(self) -> None:
         bar = tk.Menu(self)
         file_menu = tk.Menu(bar, tearoff=False)
@@ -150,6 +152,7 @@ class App(tk.Tk):
         help_menu = tk.Menu(bar, tearoff=False)
         help_menu.add_command(label="Help", command=self.help, accelerator="F1")
         help_menu.add_command(label="About / Licenses", command=self.about)
+        help_menu.add_command(label="Buy me a coffee (Ko-fi)", command=self.donate)
         bar.add_cascade(label="Help", menu=help_menu)
         self.configure(menu=bar)
         self.bind("<F1>", lambda e: self.help())
@@ -157,6 +160,9 @@ class App(tk.Tk):
 
     def help(self) -> None:
         show_text_window(self, "usbdrv - Help", guicore.HELP_TEXT, height=36)
+
+    def donate(self) -> None:
+        webbrowser.open(guicore.KOFI_URL)
 
     def about(self) -> None:
         show_text_window(self, "About usbdrv", guicore.about_text(), height=22)
@@ -188,7 +194,7 @@ class App(tk.Tk):
             values = [str(v) for v in self.tree.item(sel[0], "values")]
             copy_to_clipboard(self, "\t".join(values + [self.devices[int(sel[0])]["instance_id"]]))
 
-    # -- helpers -----------------------------------------------------------------------------
+    # -- funzioni di supporto ----------------------------------------------------------------
     def write(self, text: str) -> None:
         self.log.configure(state="normal")
         self.log.delete("1.0", "end")
@@ -200,7 +206,7 @@ class App(tk.Tk):
         return self.devices[int(sel[0])] if sel else None
 
     def background(self, work: Callable, done: Callable) -> None:
-        """Run work() off the UI thread, then done(result) on it. Ignored while another job runs."""
+        """Esegue work() fuori dal thread dell'interfaccia, poi done(result) su di esso. Ignorato mentre un altro lavoro è in corso."""
         if self.busy:
             return
         self.busy = True
@@ -216,7 +222,7 @@ class App(tk.Tk):
         def run():
             try:
                 res = work()
-            except Exception as e:  # shown in the window, never lost in the thread
+            except Exception as e:  # mostrato nella finestra, mai perso nel thread
                 res = e
             self.after(0, lambda: finish(res))
 
@@ -232,7 +238,7 @@ class App(tk.Tk):
         lines += ["", "exit code %d: %s" % (res.code, res.meaning)]
         return "\n".join(lines)
 
-    # -- actions -----------------------------------------------------------------------------
+    # -- azioni ------------------------------------------------------------------------------
     def refresh(self) -> None:
         def done(res):
             if isinstance(res, Exception) or not res.ok:

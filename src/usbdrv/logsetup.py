@@ -1,4 +1,4 @@
-"""Logging: timestamped file log (text or JSON lines) and optional console echo."""
+"""Logging: file di log con data e ora (testo o righe JSON) ed eco facoltativo sulla console."""
 
 import json
 import logging
@@ -30,7 +30,7 @@ def parse_level(name: str) -> int:
 
 def setup_logging(level: str = "INFO", log_file: Optional[str] = None, fmt: str = "text",
                   verbose: bool = False, stream=None) -> logging.Logger:
-    """Configure and return the 'usbdrv' logger. Safe to call repeatedly (resets handlers)."""
+    """Configura e restituisce il logger 'usbdrv'. Si può chiamare più volte senza problemi (reimposta gli handler)."""
     logger = logging.getLogger(LOGGER_NAME)
     for h in list(logger.handlers):
         logger.removeHandler(h)

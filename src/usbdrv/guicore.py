@@ -1,7 +1,8 @@
-"""Logic behind the GUI, with no tkinter: it only drives the CLI.
+"""La logica dietro la GUI, senza tkinter: si limita a pilotare la CLI.
 
-Every action goes through cli.main(--json), so the GUI has exactly the same safety rules as the command line
-(protected classes, --yes, administrator check, post-install check). Nothing here runs a system command itself.
+Ogni azione passa da cli.main(--json), quindi la GUI ha esattamente le stesse regole di sicurezza della riga di
+comando (classi protette, --yes, controllo dell'amministratore, verifica dopo l'installazione). Qui dentro nulla
+esegue direttamente un comando di sistema.
 """
 
 import ctypes
@@ -29,7 +30,7 @@ class Result:
 
 
 def call(argv: List[str], main: Callable = cli.main, **kw) -> Result:
-    """Run one CLI command in-process and return its JSON result."""
+    """Esegue un comando della CLI nello stesso processo e ne restituisce il risultato JSON."""
     out, err = io.StringIO(), io.StringIO()
     code = main(["--json"] + list(argv), out=out, err=err, **kw)
     try:
@@ -41,7 +42,7 @@ def call(argv: List[str], main: Callable = cli.main, **kw) -> Result:
 
 
 def target_args(dev: dict) -> List[str]:
-    """Select exactly this device/interface (the instance ID is unique)."""
+    """Seleziona esattamente questo dispositivo/interfaccia (l'instance ID è univoco)."""
     return ["--vid", "%04X" % dev["vid"], "--pid", "%04X" % dev["pid"], "--instance", dev["instance_id"]]
 
 
@@ -69,12 +70,12 @@ def list_devices(main: Callable = cli.main, hubs: bool = False, **kw) -> Result:
 
 
 def preview(argv: List[str], main: Callable = cli.main, **kw) -> Result:
-    """Dry run: shows the plan, changes nothing."""
+    """Prova (dry-run): mostra il piano, non cambia nulla."""
     return call(argv + ["--dry-run"], main, **kw)
 
 
 def apply(argv: List[str], main: Callable = cli.main, **kw) -> Result:
-    """The real run. The caller must have shown the preview and obtained the user's confirmation."""
+    """L'esecuzione vera. Chi chiama deve aver mostrato l'anteprima e ottenuto la conferma dell'utente."""
     return call(argv + ["--yes"], main, **kw)
 
 
@@ -109,6 +110,7 @@ BUTTONS
   Licenses      Shows the third-party components and their licenses. Read-only.
   Save output   Saves the text of the lower box (plan, diagnosis, certificates, licenses) to a file.
   Help / About  This text / version, license and credits.
+  Ko-fi (cup)   Opens the Ko-fi page to support the project with a donation (optional).
 
 THE TEXT BOX
   Shows the result of the last action, with the exit code. Right-click for Copy / Select all. Scroll bars
@@ -124,13 +126,17 @@ GOOD TO KNOW
 """
 
 
+KOFI_URL = "https://ko-fi.com/lucacolombo35186"
+
+
 def about_text() -> str:
-    """Version, license and credits (third-party components come from usbdrv.licenses)."""
+    """Versione, licenza e crediti (i componenti di terze parti vengono da usbdrv.licenses)."""
     from . import __version__, licenses
     lines = ["usbdrv %s" % __version__,
              "Replace the driver of a USB device or interface (Windows), from the command line or this window.",
              "",
              "Copyright (c) 2026 PyLuke73. Released under the MIT License (see LICENSE).",
+             "Free software: if it is useful to you, you can support it with a donation on Ko-fi: " + KOFI_URL,
              "",
              "Credits and third-party components",
              "  usbdrv is inspired by Zadig (https://zadig.akeo.ie). No Zadig code was used (clean-room).",
@@ -146,7 +152,7 @@ def is_admin() -> bool:
 
 
 def relaunch_elevated(argv: Optional[List[str]] = None) -> bool:
-    """Ask Windows (UAC) to start this program again as Administrator. True if the request was accepted."""
+    """Chiede a Windows (UAC) di riavviare questo programma come amministratore. True se la richiesta è stata accettata."""
     rest = list(argv if argv is not None else sys.argv[1:])
     if not getattr(sys, "frozen", False):
         rest = ["-m", "usbdrv.gui"] + rest

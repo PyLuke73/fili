@@ -1,8 +1,8 @@
-"""Optional configuration file (usbdrv.toml), the counterpart of Zadig's zadig.ini.
+"""File di configurazione facoltativo (usbdrv.toml), l'equivalente dello zadig.ini di Zadig.
 
-Search order: --config PATH, ./usbdrv.toml, <APPDATA>/usbdrv/usbdrv.toml.
-Command-line options always win over the file. The file can never carry a
-confirmation: --yes must be given on the command line.
+Ordine di ricerca: --config PATH, ./usbdrv.toml, <APPDATA>/usbdrv/usbdrv.toml.
+Le opzioni da riga di comando prevalgono sempre sul file. Il file non può mai contenere
+una conferma: --yes va indicato sulla riga di comando.
 """
 
 import os
@@ -60,7 +60,7 @@ def candidate_paths(explicit: Optional[str], env: dict, cwd: str):
 
 
 def load_config(explicit: Optional[str] = None, env: Optional[dict] = None, cwd: Optional[str] = None) -> dict:
-    """Return DEFAULTS merged with the first config file found. Unknown keys are rejected."""
+    """Restituisce DEFAULTS unito al primo file di configurazione trovato. Le chiavi sconosciute vengono rifiutate."""
     cfg = {k: dict(v) for k, v in DEFAULTS.items()}
     env = os.environ if env is None else env
     for path in candidate_paths(explicit, env, cwd or os.getcwd()):

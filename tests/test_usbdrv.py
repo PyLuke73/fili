@@ -1,7 +1,7 @@
-"""Unit tests for usbdrv. They NEVER touch the system: every external command goes through a
-fake runner, and the real runner is replaced by one that fails the test if it is ever used.
+"""Test unitari di usbdrv. NON toccano MAI il sistema: ogni comando esterno passa da un
+esecutore finto, e quello vero è sostituito da uno che fa fallire il test se viene mai usato.
 
-Run:  python -I tests/test_usbdrv.py        (from the repository root)
+Esecuzione:  python -I tests/test_usbdrv.py        (dalla radice del repository)
 """
 
 import io
@@ -19,14 +19,14 @@ sys.path.insert(0, os.path.join(ROOT, "src"))
 from usbdrv import cli, config, devices, diagnose, extract, logsetup, ops  # noqa: E402
 
 
-def _forbidden(cmd):  # the real runner must never be reached from the tests
+def _forbidden(cmd):  # dai test non si deve mai arrivare all'esecutore vero
     raise AssertionError("real command executed: %r" % (cmd,))
 
 
 cli._default_run = _forbidden
 
 DEVICES = [
-    # composite device (parent + 2 interfaces), WinUSB on MI_00
+    # dispositivo composito (genitore + 2 interfacce), WinUSB su MI_00
     {"InstanceId": "USB\\VID_0483&PID_374B\\SER1", "Class": "USB", "Status": "OK", "FriendlyName": "Composite",
      "ProblemCode": 0, "Service": "usbccgp", "InfPath": "usb.inf", "DriverVersion": "10.0.1", "DriverDate": "2020-01-01", "Provider": "Microsoft"},
     {"InstanceId": "USB\\VID_0483&PID_374B&MI_00\\6&AA&0&0000", "Class": "USBDevice", "Status": "OK",
@@ -34,20 +34,20 @@ DEVICES = [
      "DriverVersion": "10.0.19041.1", "DriverDate": "2021-02-03", "Provider": "libwdi"},
     {"InstanceId": "USB\\VID_0483&PID_374B&MI_02\\6&AA&0&0002", "Class": "Ports", "Status": "OK",
      "FriendlyName": "Serial", "ProblemCode": 0, "Service": "usbser", "InfPath": "usbser.inf"},
-    # simple device without driver
+    # dispositivo semplice senza driver
     {"InstanceId": "USB\\VID_1234&PID_0001\\A", "Class": "", "Status": "Error", "FriendlyName": "Unknown device",
      "ProblemCode": 28, "ProblemStatus": 3221225473, "Service": "", "InfPath": ""},
-    # failing device
+    # dispositivo che fallisce
     {"InstanceId": "USB\\VID_0416&PID_9391\\B", "Class": "USB", "Status": "Error", "FriendlyName": "WPM USB",
      "ProblemCode": 10, "ProblemStatus": 3221225473, "Service": "usbccgp", "InfPath": "usb.inf"},
-    # two identical devices
+    # due dispositivi identici
     {"InstanceId": "USB\\VID_AAAA&PID_0002\\X1", "Class": "USB", "Status": "OK", "FriendlyName": "Twin", "ProblemCode": 0, "Service": "WinUSB", "InfPath": "oem7.inf"},
     {"InstanceId": "USB\\VID_AAAA&PID_0002\\X2", "Class": "USB", "Status": "OK", "FriendlyName": "Twin", "ProblemCode": 0, "Service": "WinUSB", "InfPath": "oem7.inf"},
-    # protected class
+    # classe protetta
     {"InstanceId": "USB\\VID_093A&PID_2510\\M", "Class": "HIDClass", "Status": "OK", "FriendlyName": "Mouse", "ProblemCode": 0, "Service": "HidUsb", "InfPath": "input.inf"},
     # hub
     {"InstanceId": "USB\\VID_8087&PID_0026\\H", "Class": "USB", "Status": "OK", "FriendlyName": "Hub", "ProblemCode": 0, "Service": "USBHUB3", "InfPath": "usbhub3.inf"},
-    # root hub without VID/PID: must be skipped
+    # root hub senza VID/PID: deve essere saltato
     {"InstanceId": "USB\\ROOT_HUB30\\4&1&0&0", "Class": "USB", "Status": "OK", "FriendlyName": "Root hub", "ProblemCode": 0, "Service": "USBHUB3"},
 ]
 
@@ -58,14 +58,14 @@ READ_ONLY_MARKERS = ("Get-PnpDevice", "'ReadOnly'", "Get-WinEvent")
 
 
 class FakeRun:
-    """Records every command; answers the read-only PowerShell queries from fixtures."""
+    """Registra ogni comando; risponde alle interrogazioni PowerShell in sola lettura con dati di prova."""
 
     def __init__(self, devices_json=None, fail=None, after=None, after_seq=None):
         self.calls = []
         self.devices_json = devices_json if devices_json is not None else DEVICES
-        self.fail = fail or {}        # substring -> (returncode, stdout, stderr)
-        self.after = after            # devices JSON returned from the 2nd enumeration on
-        self.after_seq = after_seq    # or: one list per enumeration from the 2nd on (the last repeats)
+        self.fail = fail or {}        # sottostringa -> (returncode, stdout, stderr)
+        self.after = after            # JSON dei dispositivi restituito dalla 2a enumerazione in poi
+        self.after_seq = after_seq    # oppure: una lista per enumerazione dalla 2a in poi (l'ultima si ripete)
         self.enumerations = 0
 
     def __call__(self, cmd):
@@ -89,7 +89,7 @@ class FakeRun:
         return types.SimpleNamespace(returncode=0, stdout="ok\n", stderr="")
 
     def mutating(self):
-        """Commands that are not one of the known read-only queries."""
+        """Comandi che non sono una delle interrogazioni note in sola lettura."""
         return [c for c in self.calls
                 if not (c[0] == "powershell" and any(m in c[-1] for m in READ_ONLY_MARKERS))]
 
@@ -128,18 +128,18 @@ class TestParsing(unittest.TestCase):
 
     def test_parse_list(self):
         devs = devices.parse_device_list(json.dumps(DEVICES))
-        self.assertEqual(len(devs), 9)  # root hub skipped
+        self.assertEqual(len(devs), 9)  # root hub saltato
         d = [x for x in devs if x.mi == 0][0]
         self.assertEqual((d.vid, d.pid, d.service, d.driver_version), (0x483, 0x374B, "WinUSB", "10.0.19041.1"))
         self.assertEqual(devices.parse_device_list(""), [])
-        one = devices.parse_device_list(json.dumps(DEVICES[3]))  # single object, not a list
+        one = devices.parse_device_list(json.dumps(DEVICES[3]))  # un solo oggetto, non una lista
         self.assertEqual(len(one), 1)
         self.assertFalse(one[0].has_driver)
         self.assertEqual(one[0].problem_status, 3221225473)
 
     def test_filters(self):
         devs = devices.parse_device_list(json.dumps(DEVICES))
-        self.assertEqual(len(devices.filter_devices(devs)), 8)  # hub hidden by default
+        self.assertEqual(len(devices.filter_devices(devs)), 8)  # hub nascosto in modo predefinito
         self.assertEqual(len(devices.filter_devices(devs, include_hubs=True)), 9)
         nodrv = devices.filter_devices(devs, only_no_driver=True)
         self.assertEqual([d.vid for d in nodrv], [0x1234])
@@ -150,15 +150,15 @@ class TestParsing(unittest.TestCase):
         devs = devices.parse_device_list(json.dumps(DEVICES))
         self.assertEqual(devices.select_target(devs, 0x483, 0x374B, 0).service, "WinUSB")
         with self.assertRaises(devices.AmbiguousError):
-            devices.select_target(devs, 0x483, 0x374B)           # composite, no --iface
+            devices.select_target(devs, 0x483, 0x374B)           # composito, senza --iface
         with self.assertRaises(devices.NotFoundError):
-            devices.select_target(devs, 0x483, 0x374B, 5)        # bad interface
+            devices.select_target(devs, 0x483, 0x374B, 5)        # interfaccia errata
         with self.assertRaises(devices.NotFoundError):
-            devices.select_target(devs, 0x1234, 0x0001, 0)       # not composite
+            devices.select_target(devs, 0x1234, 0x0001, 0)       # non composito
         with self.assertRaises(devices.NotFoundError):
             devices.select_target(devs, 0xDEAD, 0xBEEF)
         with self.assertRaises(devices.AmbiguousError):
-            devices.select_target(devs, 0xAAAA, 0x0002)          # two identical
+            devices.select_target(devs, 0xAAAA, 0x0002)          # due identici
         self.assertEqual(devices.select_target(devs, 0xAAAA, 0x0002, instance="usb\\vid_aaaa&pid_0002\\x2").serial, "X2")
         self.assertEqual(devices.select_target(devs, 0x1234, 0x0001).name, "Unknown device")
 
@@ -213,7 +213,7 @@ class TestSafety(unittest.TestCase):
                 self.assertIn("[dry-run]", out)
 
     def test_dry_run_needs_neither_admin_nor_tool(self):
-        # hermetic: a wdi-simple.exe built in <project>/build or found on PATH must not change the result
+        # ermetico: un wdi-simple.exe compilato in <progetto>/build o trovato nel PATH non deve cambiare il risultato
         import shutil
         from unittest import mock
         with tempfile.TemporaryDirectory() as empty,                 mock.patch.object(cli, "_project_dir", return_value=empty),                 mock.patch.object(shutil, "which", return_value=None):
@@ -291,7 +291,7 @@ class TestInstall(unittest.TestCase):
             self.assertEqual(cmd[cmd.index("-n") + 1], "My Device")
             self.assertEqual(cmd[cmd.index("-o") + 1], "5000")
             self.assertIn("-s", cmd)
-            self.assertNotIn("-i", cmd)  # not an interface
+            self.assertNotIn("-i", cmd)  # non è un'interfaccia
 
     def test_needs_admin_error_is_retried_once(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -324,7 +324,7 @@ class TestInstall(unittest.TestCase):
     def test_post_check_detects_wrong_driver(self):
         with tempfile.TemporaryDirectory() as tmp:
             code, out, err, run = call(["install", "--vid", "1234", "--pid", "0001", "--driver", "winusb", "--wdi", fake_wdi(tmp), "--yes"],
-                                       admin=True)   # device still has no driver afterwards
+                                       admin=True)   # dopo l'operazione il dispositivo è ancora senza driver
             self.assertEqual(code, 6)
             self.assertIn("diagnose", err)
 
@@ -333,7 +333,7 @@ class TestInstall(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("-t 3", [l for l in out.splitlines() if l.startswith("Command:")][0])
         code, out, err, run = call(["reinstall", "--vid", "1234", "--pid", "0001", "--dry-run"])
-        self.assertEqual(code, 2)   # no driver to reinstall
+        self.assertEqual(code, 2)   # nessun driver da reinstallare
 
     def test_default_driver_from_config(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -354,9 +354,9 @@ class TestRestore(unittest.TestCase):
 
     def test_refusals(self):
         devs = devices.parse_device_list(json.dumps(DEVICES))
-        with self.assertRaises(ValueError):   # in-box package, not OEM
+        with self.assertRaises(ValueError):   # pacchetto incluso in Windows, non OEM
             ops.restore_plan(devices.select_target(devs, 0x483, 0x374B, 2), devs)
-        with self.assertRaises(ValueError):   # package shared by two devices
+        with self.assertRaises(ValueError):   # pacchetto condiviso da due dispositivi
             ops.restore_plan(devices.select_target(devs, 0xAAAA, 0x0002, instance="USB\\VID_AAAA&PID_0002\\X1"), devs)
         code, out, err, run = call(["restore", "--vid", "0483", "--pid", "374B", "--iface", "2", "--yes"], admin=True)
         self.assertEqual(code, 2)
@@ -364,7 +364,7 @@ class TestRestore(unittest.TestCase):
 
     @staticmethod
     def _with_probe_driver(inf, provider, service="WinUSB"):
-        """DEVICES with the interface MI_00 bound to the given package."""
+        """DEVICES con l'interfaccia MI_00 associata al pacchetto indicato."""
         out = json.loads(json.dumps(DEVICES))
         for d in out:
             if d["InstanceId"].startswith("USB\\VID_0483&PID_374B&MI_00"):
@@ -388,8 +388,8 @@ class TestRestore(unittest.TestCase):
         self.assertEqual([c[1] for c in run.mutating()], ["/delete-driver", "/scan-devices"])
 
     def test_restore_removes_leftover_libwdi_packages(self):
-        # found on a real system: after 'reinstall' two libwdi packages exist (oem5, oem6); removing the bound
-        # one made Windows bind the older one and the device stayed on WinUSB although restore exited 0
+        # trovato su un sistema reale: dopo 'reinstall' esistono due pacchetti libwdi (oem5, oem6); rimuovere quello associato
+        # faceva associare a Windows il più vecchio e il dispositivo restava su WinUSB anche se restore usciva con 0
         leftover = self._with_probe_driver("oem41.inf", "libwdi")
         original = self._with_probe_driver("input.inf", "Microsoft", "HidUsb")
         run = FakeRun(after_seq=[leftover, leftover, original])
@@ -409,9 +409,9 @@ class TestRestore(unittest.TestCase):
 
 
 class TestEncoding(unittest.TestCase):
-    """Found by the first real installation test (Windows Server 2022, Italian, output redirected):
-    pnputil printed cp850 text, usbdrv decoded it as UTF-8 with U+FFFD and then could not print U+FFFD
-    to a cp1252 stdout ('charmap' codec error): restore ran but returned exit code 2."""
+    """Trovato dalla prima prova di installazione reale (Windows Server 2022, italiano, output rediretto):
+    pnputil stampava testo cp850, usbdrv lo decodificava come UTF-8 con U+FFFD e poi non riusciva a stampare U+FFFD
+    su uno stdout cp1252 (errore del codec 'charmap'): restore veniva eseguito ma restituiva il codice di uscita 2."""
 
     def test_decode_output_utf8_and_oem(self):
         self.assertEqual(cli.decode_output(b""), "")
@@ -419,10 +419,10 @@ class TestEncoding(unittest.TestCase):
         orig = cli._oem_codec
         try:
             cli._oem_codec = lambda: "cp850"
-            self.assertEqual(cli.decode_output(b"perch\x82 ok"), "perch\u00e9 ok")   # cp850: 0x82 = e acute
-            self.assertIsInstance(cli.decode_output(bytes(range(256))), str)          # never raises
+            self.assertEqual(cli.decode_output(b"perch\x82 ok"), "perch\u00e9 ok")   # cp850: 0x82 = e accentata (e acuta)
+            self.assertIsInstance(cli.decode_output(bytes(range(256))), str)          # non solleva mai eccezioni
             cli._oem_codec = lambda: "cp99999"
-            self.assertIsInstance(cli.decode_output(b"\xff\xfe abc"), str)           # unknown code page
+            self.assertIsInstance(cli.decode_output(b"\xff\xfe abc"), str)           # code page sconosciuta
         finally:
             cli._oem_codec = orig
 
@@ -431,7 +431,7 @@ class TestEncoding(unittest.TestCase):
         raw = io.BytesIO()
         stream = io.TextIOWrapper(raw, encoding="cp1252", errors="strict")
         cli._safe_streams(stream)
-        stream.write("bad char: \ufffd and \u0411\n")            # not encodable in cp1252
+        stream.write("bad char: \ufffd and \u0411\n")            # non codificabile in cp1252
         stream.flush()
         self.assertIn(b"bad char", raw.getvalue())
 
@@ -481,7 +481,7 @@ class TestHelp(unittest.TestCase):
                 self.assertNotIn(forbidden, text.lower(), forbidden)
 
     def test_examples_parse_with_the_real_parser(self):
-        # each example line that starts with "usbdrv" must be accepted by the parser
+        # ogni riga di esempio che inizia con "usbdrv" deve essere accettata dal parser
         import re
         import shlex
         main, subs = self._parsers()
@@ -491,7 +491,7 @@ class TestHelp(unittest.TestCase):
                 m = re.match(r"\s+usbdrv\s+(.*)$", line)
                 if not m or "<" in line or ">" in line or "Run '" in line:
                     continue
-                cmdline = re.split(r"\s{3,}", m.group(1))[0]       # drop the trailing description
+                cmdline = re.split(r"\s{3,}", m.group(1))[0]       # scarta la descrizione finale
                 try:
                     main.parse_args(shlex.split(cmdline, posix=False))
                 except SystemExit:
@@ -507,7 +507,7 @@ class TestExtract(unittest.TestCase):
             outdir = os.path.join(tmp, "pkg")
             code, out, err, run = call(["extract", "--vid", "0483", "--pid", "374B", "--iface", "0", "--out", outdir], run=run)
             self.assertEqual(code, 0, err)
-            self.assertEqual(os.listdir(outdir), ["usbdrv.inf"])        # no .cat, no binaries
+            self.assertEqual(os.listdir(outdir), ["usbdrv.inf"])        # niente .cat, niente binari
             text = read_text(os.path.join(outdir, "usbdrv.inf"))
             self.assertIn("VID_0483&PID_374B&MI_00", text)
             self.assertIn("Include = winusb.inf", text)
@@ -516,7 +516,7 @@ class TestExtract(unittest.TestCase):
             self.assertIn("system is unchanged", out)
 
     def test_inf_sections_are_all_used(self):
-        # infverif warns about unreferenced sections: render only the guid block that is used
+        # infverif segnala le sezioni non referenziate: genera solo il blocco guid che serve
         from usbdrv.devices import UsbDevice
         dev = UsbDevice("USB\VID_1234&PID_0001\X", 0x1234, 1, None, "", "USB", "OK", "T", "", "", "", "", "", 0, None)
         plain = extract.render_inf(dev)
@@ -535,7 +535,7 @@ class TestExtract(unittest.TestCase):
             code, out, err, run = call(["extract", "--vid", "1234", "--pid", "0001", "--out", tmp, "--driver", "libusbk"])
             self.assertEqual(code, 2)
             code, out, err, run = call(["extract", "--vid", "1234", "--pid", "0001"])
-            self.assertEqual(code, 2)   # --out missing
+            self.assertEqual(code, 2)   # --out mancante
 
 
 class TestDiagnose(unittest.TestCase):
@@ -576,7 +576,7 @@ class TestDiagnose(unittest.TestCase):
         devs = devices.parse_device_list(json.dumps(DEVICES))
         dev = devices.select_target(devs, 0x416, 0x9391)
         secs = diagnose.relevant_sections(self.SETUPAPI, dev)
-        self.assertEqual(len(secs), 2)                               # the unrelated one is excluded
+        self.assertEqual(len(secs), 2)                               # quello estraneo viene escluso
         self.assertEqual(len(diagnose.relevant_sections(self.SETUPAPI, dev, last=1)), 1)
         newer = diagnose.relevant_sections(self.SETUPAPI, dev, since=datetime(2026, 10, 11))
         self.assertEqual(len(newer), 1)
@@ -618,18 +618,18 @@ class TestCerts(unittest.TestCase):
         self.assertIn("LocalMachine\\Root\\" + "A" * 40, run.mutating()[0][-1])
 
     def test_scripts_do_not_depend_on_the_cert_drive(self):
-        # a 'powershell' started from PowerShell 7 does not load the Cert: drive: the listing was silently empty
+        # un 'powershell' avviato da PowerShell 7 non carica l'unità Cert: l'elenco risultava vuoto senza alcun errore
         self.assertNotIn("Cert:", ops.CERT_LIST_SCRIPT)
         self.assertNotIn("Cert:", ops.CERT_REMOVE_SCRIPT)
 
     def test_validation(self):
         self.assertEqual(call(["cert-remove", "--thumbprint", "xyz", "--yes"], admin=True)[0], 2)
-        self.assertEqual(call(["cert-remove", "--thumbprint", "B" * 40, "--yes"], admin=True)[0], 2)  # not a libwdi cert
+        self.assertEqual(call(["cert-remove", "--thumbprint", "B" * 40, "--yes"], admin=True)[0], 2)  # non è un certificato libwdi
 
 
 class TestLogging(unittest.TestCase):
     def tearDown(self):
-        logsetup.setup_logging("INFO")   # close file handlers (Windows keeps them locked)
+        logsetup.setup_logging("INFO")   # chiude gli handler dei file (Windows li tiene bloccati)
 
     def _run_failing(self, tmp, fmt):
         log = os.path.join(tmp, "u.log")
@@ -647,12 +647,12 @@ class TestLogging(unittest.TestCase):
             self.assertIn("driver install failed: access denied", text)
             self.assertIn("exit 5", text)
             self.assertIn("failed (exit 6)", text)
-            self.assertNotIn("DEBUG", text)                           # default level INFO
+            self.assertNotIn("DEBUG", text)                           # livello predefinito INFO
 
     def test_json_log_is_valid(self):
         with tempfile.TemporaryDirectory() as tmp:
             code, text = self._run_failing(tmp, "json")
-            lines = [json.loads(l) for l in text.splitlines()]        # every line must be valid JSON
+            lines = [json.loads(l) for l in text.splitlines()]        # ogni riga deve essere JSON valido
             self.assertTrue(lines)
             for rec in lines:
                 self.assertTrue({"time", "level", "message"} <= set(rec))
@@ -670,7 +670,7 @@ class TestLogging(unittest.TestCase):
             text = read_text(log)
             self.assertIn("DEBUG", text)
             self.assertIn("exec: powershell", text)
-            self.assertIn("DEBUG", err)                                # echoed on stderr
+            self.assertIn("DEBUG", err)                                # riportato su stderr
 
     def test_no_environment_or_secrets_logged(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -697,7 +697,7 @@ class TestJsonOutput(unittest.TestCase):
         self.assertFalse(doc["ok"])
         self.assertEqual(doc["exit_code"], 4)
         self.assertIn("no present USB device", doc["error"])
-        self.assertEqual(err, "")                                    # nothing but JSON in JSON mode
+        self.assertEqual(err, "")                                    # in modalità JSON solo JSON, nient'altro
 
     def test_json_after_subcommand(self):
         code, out, err, run = call(["status", "--vid", "1234", "--pid", "0001", "--json"])

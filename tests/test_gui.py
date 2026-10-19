@@ -1,6 +1,6 @@
-"""Tests of the GUI logic (guicore). tkinter is not needed and nothing touches the system.
+"""Test della logica della GUI (guicore). Non serve tkinter e nulla tocca il sistema.
 
-Run:  python -I tests/test_gui.py        (from the repository root)
+Esecuzione:  python -I tests/test_gui.py        (dalla radice del repository)
 """
 
 import os
@@ -12,7 +12,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
 
-from test_usbdrv import DEVICES, FakeRun, fake_wdi  # noqa: E402  (also disables the real runner)
+from test_usbdrv import DEVICES, FakeRun, fake_wdi  # noqa: E402  (disattiva anche l'esecutore vero)
 
 from usbdrv import guicore  # noqa: E402
 

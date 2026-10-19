@@ -1,4 +1,4 @@
-"""Read-only diagnostics for a USB device whose driver misbehaves."""
+"""Diagnostica in sola lettura per un dispositivo USB il cui driver non funziona bene."""
 
 import json
 import os
@@ -10,7 +10,7 @@ from .devices import UsbDevice
 
 SETUPAPI_LOG = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "INF", "setupapi.dev.log")
 
-# Device Manager (ConfigManagerErrorCode) problem codes.
+# Codici di problema di Gestione dispositivi (ConfigManagerErrorCode).
 CM_CODES = {
     0: "OK: no problem reported",
     1: "NOT_CONFIGURED: the device is not configured correctly",
@@ -51,7 +51,7 @@ CM_CODES = {
     54: "DEVICE_RESET: the device failed and is being reset",
 }
 
-# A few common NTSTATUS values seen in DEVPKEY_Device_ProblemStatus.
+# Alcuni valori NTSTATUS comuni visti in DEVPKEY_Device_ProblemStatus.
 NTSTATUS = {
     0xC0000001: "STATUS_UNSUCCESSFUL",
     0xC000000D: "STATUS_INVALID_PARAMETER",
@@ -71,7 +71,7 @@ SECTION_END_RE = re.compile(r"^<<<\s+Section end")
 
 
 def default_since(now: Optional[datetime] = None) -> datetime:
-    """Default window for event-log queries: the last 7 days."""
+    """Finestra predefinita per le interrogazioni del registro eventi: gli ultimi 7 giorni."""
     return (now or datetime.now()) - timedelta(days=7)
 
 
@@ -87,7 +87,7 @@ def describe_ntstatus(value: Optional[int]) -> str:
 
 
 def parse_since(text: str, now: Optional[datetime] = None) -> datetime:
-    """'2h', '3d', '30m', 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM'."""
+    """'2h', '3d', '30m', 'YYYY-MM-DD' oppure 'YYYY-MM-DD HH:MM'."""
     now = now or datetime.now()
     t = text.strip()
     m = re.fullmatch(r"(\d+)([mhd])", t)
@@ -104,7 +104,7 @@ def parse_since(text: str, now: Optional[datetime] = None) -> datetime:
 
 
 def split_sections(log_text: str) -> List[dict]:
-    """Split setupapi.dev.log into sections: {title, start(datetime|None), lines}."""
+    """Divide setupapi.dev.log in sezioni: {title, start(datetime|None), lines}."""
     sections, cur = [], None
     for line in log_text.splitlines():
         m = SECTION_START_RE.match(line)
@@ -132,7 +132,7 @@ def device_needles(dev: UsbDevice) -> List[str]:
 
 def relevant_sections(log_text: str, dev: UsbDevice, since: Optional[datetime] = None,
                       last: int = 5) -> List[dict]:
-    """Last N sections of setupapi.dev.log that mention the device's VID/PID or instance."""
+    """Ultime N sezioni di setupapi.dev.log che citano il VID/PID o l'istanza del dispositivo."""
     needle_ids = device_needles(dev)
     vp = needle_ids[0]
     out = []
@@ -172,7 +172,7 @@ ConvertTo-Json -InputObject $rows -Compress
 
 
 def read_events(run: Callable, dev: UsbDevice, since: datetime, max_events: int = 20) -> List[dict]:
-    """Best effort: some logs are disabled or need Administrator; returns [] in that case."""
+    """Al meglio: alcuni registri sono disabilitati o richiedono l'amministratore; in quel caso restituisce []."""
     res = run(["powershell", "-NoProfile", "-NonInteractive", "-Command", event_script(dev, since, max_events)])
     if res.returncode != 0 or not (res.stdout or "").strip():
         return []
