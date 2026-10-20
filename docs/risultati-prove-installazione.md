@@ -13,7 +13,7 @@ virtuale usa e getta, non su un PC di lavoro.
 | Macchina virtuale | VirtualBox 7.2.20, 1 CPU, 4 GB RAM, USB xHCI, Guest Additions 7.2.20 |
 | Dispositivo di prova | **tablet USB virtuale** di VirtualBox (`80EE:0021`, classe HID, driver di partenza `HidUsb` / `input.inf`). Esiste solo nella macchina virtuale |
 | Python | 3.12.2 portatile (embeddable), solo libreria standard |
-| `wdi-simple.exe` | libwdi v1.5.1 compilato a mano (SHA-256 `3cae635b…19af9`), driver incorporati: WDK 8.0 redist, libusb-win32 1.4.0.0, libusbK 3.1.0.0 |
+| `wdi-simple.exe` | libwdi v1.5.1 compilato a mano (SHA-256 `3cae635b…19af9`), driver incorporati: WDK 8.0 redist, libusb-win32 1.4.0.0, libusbK 3.1.0.0 (build del 13/10/2026; dal 20/10/2026 senza co-installer WDK, vedi `docs/licenza.md`) |
 | Esecuzione | tutto con `VBoxManage guestcontrol`, account amministratore (reindirizzando l'output) |
 
 Perché non una chiavetta USB reale: il passaggio della chiavetta (USB 3) dal PC alla macchina virtuale è rimasto

@@ -18,7 +18,7 @@
 | `examples/wdi-simple.c` | GNU LGPL v3 o successiva | compilato dall'utente, eseguito come **programma esterno** (sottoprocesso) |
 | `examples/zadig.c` (Zadig) | **GNU GPL v3 o successiva** | **non copiato né adattato** (clean room): solo comportamento e documentazione |
 | `examples/getopt/*` | GNU LGPL / GNU C Library | dentro `wdi-simple.exe` |
-| driver incorporabili (WinUSB co-installer del WDK, libusb0.sys, libusbK.sys, usbser) | licenze proprie, **non presenti nel repository**: arrivano da cartelle esterne indicate in `configure` (`--with-wdkdir`, `--with-libusb0`, `--with-libusbk`) | **da verificare uno per uno** quando si costruisce un binario da distribuire |
+| driver incorporabili (libusb0.sys, libusbK.sys, usbser; i co-installer WinUSB del WDK non più, vedi sotto) | licenze proprie, **non presenti nel repository**: arrivano da cartelle esterne indicate in `configure` (`--with-wdkdir`, `--with-libusb0`, `--with-libusbk`) | **da verificare uno per uno** quando si costruisce un binario da distribuire |
 | dati `vid_data.c` (elenco vendor ID, da usb.ids) | da verificare | dentro `wdi-simple.exe` |
 
 Cosa abbiamo e non abbiamo fatto: nessuna riga di `zadig.c` è stata copiata o adattata. Per l'elenco delle funzioni
@@ -81,8 +81,8 @@ incorporati con la licenza di ciascuno, **che devi scrivere tu dopo averli verif
 - includere il **testo della LGPL-3.0** (e della GPL-3.0 che essa richiama) e un avviso di copyright di libwdi;
 - indicare che il binario usa libwdi e dove ottenere il **sorgente corrispondente** (stessa versione/tag); è prudente includerlo
   o fare un'offerta scritta valida (3 anni è la prassi GPL; la LGPL-3 richiede di rendere disponibile il sorgente);
-- se il binario incorpora i driver: rispettare le licenze di ciascuno e **le condizioni di ridistribuzione del WDK**
-  (Microsoft) per i co-installer WinUSB; elencarli in `NOTICE` dopo averle verificate;
+- se il binario incorpora i driver: rispettare le licenze di ciascuno ed elencarli in `NOTICE` dopo averle verificate (i
+  co-installer WinUSB del WDK non sono più incorporati: vedi l'aggiornamento seguente);
 - permettere al destinatario di ricostruire/sostituire la libreria (LGPL-3): documentare come ricompilare (`docs/building-wdi-simple.md`);
 - firmare e pubblicare gli hash dei binari (vedi checklist).
 
@@ -92,8 +92,18 @@ Per chi vuole solo installare e usare, `scripts/build_installer.ps1` produce `di
 Setup) che include `wdi-simple.exe` e quindi **accetta gli obblighi della tabella seguente**: usa il pacchetto di
 `package_wdi_bundle.py` (testi LGPL/GPL, `NOTICE`, offerta scritta e sorgente di libwdi 1.5.1) più il **sorgente di
 libusb-win32 1.4.0.0** (`libusb0.sys` è GPL; hash fissato nello script), e mostra `packaging/INSTALLER_NOTICE.txt`. L'installer
-copia soltanto file. **Non risolto, da verificare prima di pubblicarlo:** le condizioni dei co-installer WinUSB del WDK (manleva
-verso Microsoft; i destinatari devono accettare termini che proteggano Microsoft almeno quanto i suoi). Non è una consulenza legale.
+copia soltanto file. Non è una consulenza legale.
+
+**Co-installer WinUSB del WDK: risolto togliendoli (20/10/2026).** Prima il binario incorporava `WdfCoInstaller01011.dll` e
+`winusbcoinstaller2.dll` (codice Microsoft «Distributable Code», con obbligo di manleva verso Microsoft per chi li ridistribuisce).
+Servono solo a Windows XP/Vista, quindi `scripts/build_wdi_simple.sh` ora li esclude per default: `scripts/strip_coinstallers.py`
+li toglie dall'elenco dei file incorporati e dai template INF/CAT di libwdi (modifica a libwdi documentata e riproducibile; il
+sorgente di libwdi nel bundle resta quello originale e la patch è nel repository). Il binario scende da ~3,9 MB a ~1,1 MB e non
+contiene più nessun file Microsoft (controllato cercando `WdfCoInstaller` e `winusbcoinstaller` nei byte). Prova su Windows 11
+x64 con la chiavetta sacrificabile (`scripts/driver_matrix.py`): winusb, libusbk e libusb-win32 si installano e si ripristinano
+(PASS), salute USB invariata. **Resta da fare** la stessa prova su Windows 10 (la VM) prima di una release. Chi ha bisogno di
+Windows < 10 ricompila con `WITH_COINSTALLERS=1` (e `fetch_wdi_deps.ps1 -WithCoInstallers`) assumendosi le condizioni Microsoft:
+nel sorgente pubblico resta quindi questa strada, senza che il repository contenga file Microsoft (si scaricano alla build).
 
 ### Decisione originale: sorgente da compilare, non binario
 
@@ -108,7 +118,7 @@ parte (una "release" con il pacchetto di `package_wdi_bundle.py`) solo accettand
 
 | Driver | Licenza | Cosa comporta ridistribuirlo |
 |---|---|---|
-| WinUSB: co-installer del WDK 8.0 (`WdfCoInstaller01011.dll`, `winusbcoinstaller2.dll`) | Microsoft Windows Driver Frameworks 1.11, «Distributable Code» | niente modifiche, solo Windows, avviso di copyright, **manleva verso Microsoft**, no licenze copyleft sul codice distribuito; servono solo a Windows vecchi (XP/Vista), non a 10/11 |
+| ~~WinUSB: co-installer del WDK 8.0~~ (`WdfCoInstaller01011.dll`, `winusbcoinstaller2.dll`) **non più incorporati** dal 20/10/2026; condizioni se li reincorpori: | Microsoft Windows Driver Frameworks 1.11, «Distributable Code» | niente modifiche, solo Windows, avviso di copyright, **manleva verso Microsoft**, no licenze copyleft sul codice distribuito; servono solo a Windows vecchi (XP/Vista), non a 10/11 |
 | libusb-win32 1.4.0.0 | driver `libusb0.sys` **GPL**; libreria e installer LGPL | testo delle licenze e **sorgente corrispondente** di libusb-win32 1.4.0.0 |
 | libusbK 3.1.0.0 | doppia: **New BSD** o GPL, a scelta (lo dichiarano le intestazioni dei sorgenti del driver) | scelta BSD: mantenere avviso e testo, già copiato in `LICENSES/BSD-3-Clause-libusbK.txt` (dal tag V3.1.0.0) e `AUTHORS-libusbK.txt`; non usare il nome dell'autore per promuovere il prodotto |
 | CDC (`usbser`) | driver di Windows | niente: non viene ridistribuito |

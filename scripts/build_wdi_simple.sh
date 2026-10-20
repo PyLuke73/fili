@@ -6,6 +6,10 @@
 #         2) scripts/build_wdi_simple.sh                       (this script; run it from an MSYS2/Git Bash shell)
 # Result: build/wdi-simple.exe   (git-ignored). Nothing is installed or run: the exe is only compiled.
 #
+# Co-installer Microsoft (WdfCoInstaller01011.dll, winusbcoinstaller2.dll): per default NON sono incorporati. Servono solo a
+# Windows XP/Vista e ridistribuirli impone la manleva del WDK (docs/licenza.md). WITH_COINSTALLERS=1 riporta la build
+# precedente (richiede fetch_wdi_deps.ps1 -WithCoInstallers; chi pubblica quel binario si assume le condizioni Microsoft).
+#
 # Why not ./configure: the MSYS2 package mirrors failed TLS verification on the build PC, so autoconf/automake could
 # not be installed (verification was not disabled). The build is the one in libwdi/Makefile.am, written out by hand.
 set -euo pipefail
@@ -20,6 +24,7 @@ for t in git gcc windres ar cygpath sha256sum; do
   command -v "$t" >/dev/null 2>&1 || { echo "missing tool: $t (MSYS2 ucrt64 gcc/binutils + Git, see docs/building-wdi-simple.md)" >&2; exit 1; }
 done
 WW="$(cygpath -m "$WORK")"
+WITH_COINSTALLERS="${WITH_COINSTALLERS:-0}"
 WDK_DIR="$WW/wdk/Windows Kits/8.0"
 LIBUSB0_DIR="$WW/libusb0x/libusb-win32-bin-1.4.0.0"
 LIBUSBK_DIR="$WW/libusbkx/libusbK-3.1.0.0-bin/bin"
@@ -32,6 +37,15 @@ SRC="$WORK/libwdi"
 if [ ! -d "$SRC" ]; then git clone -q --depth 1 --branch "$REF" https://github.com/pbatard/libwdi.git "$SRC"; fi
 HEAD="$(git -C "$SRC" rev-parse HEAD)"
 [ "$HEAD" = "$REF_COMMIT" ] || { echo "libwdi is at $HEAD, expected $REF_COMMIT (set LIBWDI_COMMIT if you changed LIBWDI_REF on purpose)" >&2; exit 1; }
+
+if [ "$WITH_COINSTALLERS" != 1 ]; then
+  # ripristina i file toccati dalla patch (build ripetibili) e toglie i co-installer
+  git -C "$SRC" checkout -q -- libwdi/embedder_files.h libwdi/winusb.inf.in libwdi/libusbk.inf.in \
+    libwdi/winusb.cat.in libwdi/libusbk.cat.in
+  python -I "$ROOT/scripts/strip_coinstallers.py" "$(cygpath -m "$SRC")"
+  # WDK_DIR resta definito (senza file): libwdi considera WinUSB supportato e non prende il co-installer dal pacchetto libusbK
+  WDK_DIR="$WW/unused-wdk-no-coinstallers"
+fi
 
 INC="$WORK/inc"; mkdir -p "$INC"
 cat > "$INC/config.h" <<EOF

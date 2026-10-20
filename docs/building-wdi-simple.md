@@ -25,7 +25,7 @@ and the Windows `curl.exe`. Neither `make` nor autotools are needed.
 
 | File | Source | SHA-256 (as downloaded on 2026-10-11) |
 |---|---|---|
-| `wdk-redist.msi` (WDK 8.0 redistributables: WinUSB / WDF co-installers) | `https://go.microsoft.com/fwlink/p/?LinkID=253170` | `29314207814CE9D5D73695F7E9239539CF37C79E750B9D5EA5A5EF5487A583D6` |
+| `wdk-redist.msi` (WDK 8.0 redistributables: WinUSB / WDF co-installers; **solo con `-WithCoInstallers`**) | `https://go.microsoft.com/fwlink/p/?LinkID=253170` | `29314207814CE9D5D73695F7E9239539CF37C79E750B9D5EA5A5EF5487A583D6` |
 | `libusb0.zip` (libusb-win32 1.4.0.0) | `github.com/mcuee/libusb-win32/releases/download/release_1.4.0.0/` | `9950B7A226E3EA387365C046D13B68BD0B0B18C015C034363601FF601C5B5585` |
 | `libusbk.7z` (libusbK 3.1.0.0) | `github.com/mcuee/libusbk/releases/download/V3.1.0.0/` | `38605D8D5A86F408A4B7BEC60F6D4A096050EEE72F89A63A8D5BE125252D3FE7` |
 
@@ -37,23 +37,27 @@ install anything).
 ## What the build does (the same as `libwdi/Makefile.am`, written out by hand)
 
 1. `installer_x64.exe` from `libwdi/installer.c` (the helper that libwdi embeds and runs elevated).
-2. `embedder.exe` generates `embedded.h`, which embeds in the library: the WinUSB co-installers, libusb0 and libusbK
-   driver files, the helper and the INF/CAT templates.
+2. `embedder.exe` generates `embedded.h`, which embeds in the library: libusb0 and libusbK
+   driver files (the WinUSB co-installers only with `WITH_COINSTALLERS=1`), the helper and the INF/CAT templates.
 3. `libwdi.a`, then `wdi-simple.exe` (static, x64, console). It imports only system DLLs (`KERNEL32`, `SETUPAPI`, `ole32`,
    `ntdll`, the Universal CRT `api-ms-win-crt-*`, ...): runs on Windows 10/11 x64.
 4. The `config.h` is written by the script: `WDK_DIR`, `WDF_VER 1011`, `COINSTALLER_DIR "wdf"`, `X64_DIR "x64"`,
    `LIBUSB0_DIR`, `LIBUSBK_DIR`, `OPT_M64`, `ENABLE_LOGGING 1`. **x64 only** (no 32-bit, no ARM64).
 
-Result of the reference build: `build/wdi-simple.exe`, about 4.1 MB, PE32+ x86-64 console. The SHA-256 is **not
+Result of the reference build (with co-installers): `build/wdi-simple.exe`, about 4.1 MB (about 1.1 MB without), PE32+ x86-64 console. The SHA-256 is **not
 reproducible** between builds (timestamps are embedded); the second build was
 `3cae635b8a6dfb603525e51d113c9d5fcdde72911c381709cb6214a8d3f19af9`.
 
 ### Choices and compromises
 
-* **WinUSB uses the co-installers of the WDK 8.0 redistributables** (2012 files). libwdi v1.5.1 offers WinUSB **only** when
-  `WDK_DIR` is defined (`wdi_is_driver_supported` in `libwdi.c`), so a build without them has no WinUSB. The WDK 10 NuGet
-  package (`Microsoft.Windows.WDK.x64`) has no `redist` directory. The co-installers are legacy files; whether they matter on
-  Windows 10/11 is exactly what the installation test has to show.
+* **No Microsoft co-installers by default (since 2026-10-20).** libwdi v1.5.1 offers WinUSB **only** when `WDK_DIR` is
+  defined (`wdi_is_driver_supported` in `libwdi.c`) and, without it, takes `WdfCoInstaller01011.dll` from the libusbK
+  package instead. So the script defines `WDK_DIR` pointing at an empty path and `scripts/strip_coinstallers.py` removes
+  the co-installers from `embedder_files.h` and from the INF/CAT templates (`winusb`, `libusbk`). They are legacy files
+  (Windows XP/Vista); on Windows 11 all three drivers install and restore without them (`scripts/driver_matrix.py`).
+  The result is smaller (~1.1 MB) and contains no Microsoft file, so the WDK indemnity does not apply. To keep them
+  (Windows < 10): `fetch_wdi_deps.ps1 -WithCoInstallers`, then `WITH_COINSTALLERS=1 scripts/build_wdi_simple.sh`; whoever
+  distributes that binary accepts the Microsoft terms (`docs/embedded-drivers.txt`).
 * **Licences of what is embedded:** the WDK redistributables are under Microsoft's redistribution terms; libusb-win32 and
   libusbK have their own licences. Verify and list them in `NOTICE` and `THIRD_PARTY/embedded-drivers.txt` before giving a
   binary to anyone (`docs/licenza.md`, `scripts/package_wdi_bundle.py`).

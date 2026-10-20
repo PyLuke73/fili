@@ -20,7 +20,6 @@ THIRD-PARTY COMPONENTS INCLUDED IN THIS PACKAGE / COMPONENTI DI TERZI INCLUSI
     THIRD_PARTY\libwdi-1.5.1.tar.gz and THIRD_PARTY\libwdi-SOURCE.txt. You may replace wdi-simple.exe with your
     own build of libwdi: fili runs it as a separate program (see docs\building-wdi-simple.md).
   * Drivers embedded in wdi-simple.exe: libusb-win32 1.4.0.0 (libusb0.sys under the GPL; source in
-    THIRD_PARTY\libusb-win32-release_1.4.0.0-source.zip), libusbK 3.1.0.0 (New BSD licence) and the Microsoft
-    WinUSB co-installers from the WDK 8.0 (Microsoft Windows Driver Frameworks 1.11 terms; only for old
-    Windows versions). Licences and conditions: THIRD_PARTY\embedded-drivers.txt and the LICENSES folder.
+    THIRD_PARTY\libusb-win32-release_1.4.0.0-source.zip), libusbK 3.1.0.0 (New BSD licence). No Microsoft
+    redistributable is included (WinUSB uses the driver already in Windows 10/11). Licences and conditions: THIRD_PARTY\embedded-drivers.txt and the LICENSES folder.
   * fili itself is under the MIT licence (LICENSE). No warranty / Nessuna garanzia.

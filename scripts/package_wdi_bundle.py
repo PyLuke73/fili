@@ -79,7 +79,7 @@ def build_bundle(exe, out, drivers_file, tag=DEFAULT_TAG, commit=DEFAULT_COMMIT,
             raise BundleError("missing legal/build file in the repository: %s" % rel)
     if not drivers_file or not os.path.isfile(drivers_file):
         raise BundleError("--drivers-file is required: a text file that lists every driver embedded in "
-                          "your wdi-simple.exe (WinUSB co-installers, libusb0, libusbK, ...) with its "
+                          "your wdi-simple.exe (libusb0, libusbK, ...) with its "
                           "license and where you verified it")
     with open(drivers_file, encoding="utf-8") as f:
         if len(f.read().strip()) < 20:

@@ -10,23 +10,13 @@ not legal advice.
 fili does not modify any of these files. libwdi copies them into the package it generates at run time.
 
 
-1. WinUSB co-installers (Microsoft Windows Driver Kit 8.0, redist\wdf)
-   Files   : WdfCoInstaller01011.dll, winusbcoinstaller2.dll (x86 and x64)
-   Licence : MICROSOFT SOFTWARE LICENSE TERMS - MICROSOFT WINDOWS DRIVER FRAMEWORKS 1.11
-             (License.rtf shipped with the WDK redistributables; the files are "Distributable Code"
-             listed in REDIST.TXT).
-   Main conditions for redistributing them (read the full text before distributing):
-     * add significant primary functionality to them in your program;
-     * distribute them without modification, only for the Windows platform;
-     * distributors and end users must accept terms that protect them at least as much as the Microsoft terms;
-     * display a valid copyright notice on your program;
-     * indemnify, defend and hold harmless Microsoft from claims related to your distribution;
-     * do not subject them to an "Excluded License" (a licence that requires source disclosure or the right
-       to modify as a condition of distribution).
-   Note    : the WinUSB driver itself (winusb.sys) is part of Windows and is NOT redistributed. The
-             co-installers matter only for old Windows versions (XP, Vista); they are not needed on 10/11.
-   Source  : https://go.microsoft.com/fwlink/p/?LinkID=253170 (SHA-256 of wdk-redist.msi:
-             29314207814ce9d5d73695f7e9239539cf37c79e750b9d5ea5a5ef5487a583d6)
+1. WinUSB: NESSUN file Microsoft ridistribuito (dal 20/10/2026)
+   wdi-simple.exe NON incorpora i co-installer del WDK 8.0 (WdfCoInstaller01011.dll, winusbcoinstaller2.dll): la build li
+   toglie con scripts/strip_coinstallers.py (embedder_files.h, template INF e CAT di libwdi). Servono solo a Windows XP/Vista;
+   da Windows 10 winusb.sys e il framework WDF sono già nel sistema, quindi non c'e' niente di Microsoft da ridistribuire e
+   la manleva della licenza WDK non si applica. Verificato su Windows 11 x64: WinUSB, libusbK e libusb-win32 si installano
+   e si ripristinano (scripts/driver_matrix.py). Chi vuole comunque i co-installer (Windows < 10) ricompila con
+   WITH_COINSTALLERS=1 e si assume le condizioni Microsoft (docs/licenza.md).
 
 2. libusb-win32 1.4.0.0 (libusb0.sys, libusb0.dll, install-filter.exe)
    Licence : driver (libusb0.sys): GNU General Public License (GPL);
