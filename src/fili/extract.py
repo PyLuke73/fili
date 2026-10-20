@@ -25,7 +25,7 @@ from .ops import clean_name
 # di Windows per i dispositivi WinUSB li usano, quindi qui non si ripetono sezioni AddService/Wdf). Il file libwdi/winusb.inf.in NON e'
 # stato consultato per questo modello.
 INF_TEMPLATE = """\
-; usbdrv: UNSIGNED driver package for inspection only.
+; fili: UNSIGNED driver package for inspection only.
 ; It has no catalog file, so 64-bit Windows will not install it as is.
 ; Generated for: {hwid}
 
@@ -60,7 +60,7 @@ Needs   = WINUSB.NT.Services
 
 {hw_block}
 [Strings]
-ProviderName = "usbdrv"
+ProviderName = "fili"
 DeviceDesc   = "{name}"
 """
 
@@ -92,12 +92,12 @@ def render_inf(dev: UsbDevice, *, name: Optional[str] = None, wcid: bool = False
 
 def extract_package(dev: UsbDevice, out_dir: str, driver: str, *, name: Optional[str] = None,
                     wcid: bool = False) -> str:
-    """Scrive <out_dir>/usbdrv.inf e ne restituisce il percorso. Non crea nient'altro."""
+    """Scrive <out_dir>/fili.inf e ne restituisce il percorso. Non crea nient'altro."""
     if driver != "winusb":
         raise ValueError("extract supports only the winusb driver (others need driver binaries "
                          "and are produced by libwdi at install time)")
     os.makedirs(out_dir, exist_ok=True)
-    path = os.path.join(out_dir, "usbdrv.inf")
+    path = os.path.join(out_dir, "fili.inf")
     with open(path, "w", encoding="utf-8", newline="\r\n") as f:
         f.write(render_inf(dev, name=name, wcid=wcid))
     return path

@@ -47,7 +47,7 @@ def target_args(dev: dict) -> List[str]:
 
 
 def install_args(action: str, dev: dict, driver: str = "winusb", *, force: bool = False, name: str = "",
-                 wcid: bool = False, filter_driver: bool = False) -> List[str]:
+                 wcid: bool = False, filter_driver: bool = False, all_matching: bool = False) -> List[str]:
     if action not in ("install", "reinstall", "restore"):
         raise ValueError("unknown action '%s'" % action)
     argv = [action] + target_args(dev)
@@ -60,6 +60,8 @@ def install_args(action: str, dev: dict, driver: str = "winusb", *, force: bool 
             argv.append("--wcid")
         if filter_driver:
             argv.append("--filter")
+        if all_matching:
+            argv.append("--all-matching")
     if force:
         argv.append("--force")
     return argv
@@ -80,7 +82,7 @@ def apply(argv: List[str], main: Callable = cli.main, **kw) -> Result:
 
 
 HELP_TEXT = """\
-usbdrv - what each part of the window does
+fili - what each part of the window does
 
 DEVICE LIST
   Shows the USB devices and interfaces present now: VID:PID, interface (MI_xx, for composite devices), class,
@@ -94,6 +96,8 @@ OPTIONS
   WCID          Match the device by its WCID compatible ID. Works only on devices that advertise it.
   Filter driver Attach libusb-win32 as a FILTER on top of the current driver (use with libusb-win32).
                 Some devices stop working with it: 'Restore' removes it.
+  All matching  With several identical devices (same VID:PID) change ALL of them at once. Without it only the
+                selected one is changed; 'Filter driver' needs it.
   Force         Allow changing devices in protected classes (keyboard, mouse, disk, Bluetooth...). Replacing
                 their driver can disable them: use it only if you are sure.
 
@@ -101,12 +105,12 @@ BUTTONS
   Install       Replaces the driver of the selected device/interface with the chosen one. The window first shows
                 the plan (nothing is changed), then asks you to confirm. Needs Administrator.
   Reinstall     Installs again the same kind of driver the device already uses (WinUSB, libusbK...).
-  Restore       Undoes the change: removes the driver package created by usbdrv (and the libusb-win32 filter)
+  Restore       Undoes the change: removes the driver package created by fili (and the libusb-win32 filter)
                 so that Windows binds the original driver again.
   Diagnose      Explains why the driver of the selected device fails: problem code, setupapi.dev.log excerpt and
                 recent events. With no device selected it lists all devices that report a problem. Read-only.
   Certificates  Lists the self-signed certificates created by libwdi in this PC's trusted stores (Root,
-                TrustedPublisher). Read-only. To remove one use the command line: usbdrv cert-remove.
+                TrustedPublisher). Read-only. To remove one use the command line: fili cert-remove.
   Licenses      Shows the third-party components and their licenses. Read-only.
   Save output   Saves the text of the lower box (plan, diagnosis, certificates, licenses) to a file.
   Help / About  This text / version, license and credits.
@@ -119,10 +123,10 @@ THE TEXT BOX
 GOOD TO KNOW
   * Changes need Administrator. Without it the window is read-only; use 'Restart as Administrator'.
   * Installing adds a SELF-SIGNED certificate to this PC's trusted stores. Remove it when you no longer
-    need the driver (usbdrv cert-remove).
+    need the driver (fili cert-remove).
   * While a WinUSB/libusb driver is active, a storage device or camera is not available to Windows
     until you press Restore.
-  * The same operations are available on the command line: run 'usbdrv --help'.
+  * The same operations are available on the command line: run 'fili --help'.
 """
 
 
@@ -130,16 +134,16 @@ KOFI_URL = "https://ko-fi.com/lucacolombo35186"
 
 
 def about_text() -> str:
-    """Versione, licenza e crediti (i componenti di terze parti vengono da usbdrv.licenses)."""
+    """Versione, licenza e crediti (i componenti di terze parti vengono da fili.licenses)."""
     from . import __version__, licenses
-    lines = ["usbdrv %s" % __version__,
+    lines = ["fili %s" % __version__,
              "Replace the driver of a USB device or interface (Windows), from the command line or this window.",
              "",
              "Copyright (c) 2026 PyLuke73. Released under the MIT License (see LICENSE).",
              "Free software: if it is useful to you, you can support it with a donation on Ko-fi: " + KOFI_URL,
              "",
              "Credits and third-party components",
-             "  usbdrv is inspired by Zadig (https://zadig.akeo.ie). No Zadig code was used (clean-room).",
+             "  fili is inspired by Zadig (https://zadig.akeo.ie). No Zadig code was used (clean-room).",
              "  The driver is installed by libwdi (https://libwdi.akeo.ie), run as a separate program."]
     for c in licenses.COMPONENTS[1:]:
         lines.append("  - %s: %s (%s)" % (c["name"], c["license"], c["role"]))
@@ -155,6 +159,6 @@ def relaunch_elevated(argv: Optional[List[str]] = None) -> bool:
     """Chiede a Windows (UAC) di riavviare questo programma come amministratore. True se la richiesta è stata accettata."""
     rest = list(argv if argv is not None else sys.argv[1:])
     if not getattr(sys, "frozen", False):
-        rest = ["-m", "usbdrv.gui"] + rest
+        rest = ["-m", "fili.gui"] + rest
     return ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, subprocess.list2cmdline(rest),
                                                None, 1) > 32

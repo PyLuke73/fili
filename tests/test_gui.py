@@ -12,9 +12,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
 
-from test_usbdrv import DEVICES, FakeRun, fake_wdi  # noqa: E402  (disattiva anche l'esecutore vero)
+from test_fili import DEVICES, FakeRun, fake_wdi  # noqa: E402  (disattiva anche l'esecutore vero)
 
-from usbdrv import guicore  # noqa: E402
+from fili import guicore  # noqa: E402
 
 
 def kw(run, admin):
@@ -48,6 +48,14 @@ class TestGuiCore(unittest.TestCase):
         self.assertNotIn("--driver", guicore.install_args("restore", dev, "libusbk"))
         with self.assertRaises(ValueError):
             guicore.install_args("rm -rf", dev)
+
+    def test_all_matching_is_passed_only_to_install_and_reinstall(self):
+        dev = find(self.devices(), 0x483, 0x374B, 0)
+        self.assertNotIn("--all-matching", guicore.install_args("install", dev))
+        for action in ("install", "reinstall"):
+            self.assertIn("--all-matching", guicore.install_args(action, dev, all_matching=True))
+        self.assertNotIn("--all-matching", guicore.install_args("restore", dev, all_matching=True))
+        self.assertIn("All matching", guicore.HELP_TEXT)
 
     def test_preview_changes_nothing(self):
         run = FakeRun()
@@ -95,7 +103,7 @@ class TestGuiCore(unittest.TestCase):
             self.assertIn(word, guicore.HELP_TEXT)
 
     def test_about_has_version_license_and_credits(self):
-        from usbdrv import __version__
+        from fili import __version__
         text = guicore.about_text()
         for part in (__version__, "MIT", "Zadig", "libwdi", "libusbK", "libusb-win32", "Not legal advice"):
             self.assertIn(part, text)

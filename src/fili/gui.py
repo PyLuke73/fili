@@ -1,4 +1,4 @@
-"""usbdrv-gui: una piccola finestra sulle stesse operazioni della riga di comando (tkinter, nessuna dipendenza in più).
+"""fili-gui: una piccola finestra sulle stesse operazioni della riga di comando (tkinter, nessuna dipendenza in più).
 
 La finestra mostra sempre il piano della prova (dry-run) e chiede conferma prima dell'esecuzione vera; l'esecuzione
 vera è la CLI con --yes, quindi ogni regola di sicurezza della CLI vale senza modifiche.
@@ -17,7 +17,7 @@ DRIVERS = ("winusb", "libusbk", "libusb-win32", "usbser")
 COLUMNS = (("vidpid", "VID:PID", 90), ("mi", "Iface", 55), ("cls", "Class", 90), ("service", "Driver", 90),
            ("status", "Status", 70), ("name", "Name", 330))
 WARNING = ("This replaces the driver of the selected device and adds a self-signed certificate to this PC's "
-           "trusted stores (remove it later with 'usbdrv cert-remove'). Use only on devices you own.")
+           "trusted stores (remove it later with 'fili cert-remove'). Use only on devices you own.")
 
 
 def scrolled(parent, widget) -> ttk.Frame:
@@ -84,7 +84,7 @@ def show_text_window(parent, title: str, content: str, width: int = 100, height:
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("usbdrv %s" % __version__)
+        self.title("fili %s" % __version__)
         self.geometry("920x560")
         self.devices: List[dict] = []
         self.busy = False
@@ -118,7 +118,9 @@ class App(tk.Tk):
         self.name = tk.StringVar()
         ttk.Entry(opt, textvariable=self.name, width=24).pack(side="left", padx=4)
         self.wcid, self.filt, self.force = tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()
-        for text, var in (("WCID", self.wcid), ("Filter driver", self.filt), ("Force (protected class)", self.force)):
+        self.all_matching = tk.BooleanVar()
+        for text, var in (("WCID", self.wcid), ("Filter driver", self.filt), ("All matching", self.all_matching),
+                          ("Force (protected class)", self.force)):
             ttk.Checkbutton(opt, text=text, variable=var).pack(side="left", padx=4)
 
         btn = ttk.Frame(self, padding=6)
@@ -159,18 +161,18 @@ class App(tk.Tk):
         self.bind("<Control-s>", lambda e: self.save_output())
 
     def help(self) -> None:
-        show_text_window(self, "usbdrv - Help", guicore.HELP_TEXT, height=36)
+        show_text_window(self, "fili - Help", guicore.HELP_TEXT, height=36)
 
     def donate(self) -> None:
         webbrowser.open(guicore.KOFI_URL)
 
     def about(self) -> None:
-        show_text_window(self, "About usbdrv", guicore.about_text(), height=22)
+        show_text_window(self, "About fili", guicore.about_text(), height=22)
 
     def save_output(self) -> None:
         content = self.log.get("1.0", "end-1c")
         if not content.strip():
-            messagebox.showinfo("usbdrv", "Nothing to save yet.")
+            messagebox.showinfo("fili", "Nothing to save yet.")
             return
         path = filedialog.asksaveasfilename(parent=self, title="Save output", defaultextension=".txt",
                                             filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
@@ -180,7 +182,7 @@ class App(tk.Tk):
             with open(path, "w", encoding="utf-8", newline="") as f:
                 f.write(content + "\n")
         except OSError as e:
-            messagebox.showerror("usbdrv", "Cannot save: %s" % e)
+            messagebox.showerror("fili", "Cannot save: %s" % e)
 
     def tree_popup(self, event) -> None:
         row = self.tree.identify_row(event.y)
@@ -255,10 +257,11 @@ class App(tk.Tk):
     def act(self, action: str) -> None:
         dev = self.selected()
         if not dev:
-            messagebox.showinfo("usbdrv", "Select a device first.")
+            messagebox.showinfo("fili", "Select a device first.")
             return
         argv = guicore.install_args(action, dev, self.driver.get(), force=self.force.get(), name=self.name.get(),
-                                    wcid=self.wcid.get(), filter_driver=self.filt.get())
+                                    wcid=self.wcid.get(), filter_driver=self.filt.get(),
+                                    all_matching=self.all_matching.get())
 
         def applied(res):
             self.write(self.text_of(res))
@@ -269,7 +272,7 @@ class App(tk.Tk):
             if isinstance(res, Exception) or not res.ok:
                 return
             if not guicore.is_admin():
-                messagebox.showwarning("usbdrv", "Administrator rights are needed to apply this change. "
+                messagebox.showwarning("fili", "Administrator rights are needed to apply this change. "
                                        "Use 'Restart as Administrator'.")
                 return
             question = "%s\n\n%s %s (%s)?" % (WARNING, action.capitalize(), dev["vidpid"], dev["name"] or "no name")
@@ -284,7 +287,7 @@ class App(tk.Tk):
 
     def certs(self) -> None:
         self.background(lambda: guicore.call(["cert-remove"]), lambda r: self.write(
-            self.text_of(r) + "\n\nTo remove one: usbdrv cert-remove --thumbprint <hash> --yes"))
+            self.text_of(r) + "\n\nTo remove one: fili cert-remove --thumbprint <hash> --yes"))
 
     def licenses(self) -> None:
         self.background(lambda: guicore.call(["licenses"]), lambda r: self.write(self.text_of(r)))
@@ -293,12 +296,12 @@ class App(tk.Tk):
         if guicore.relaunch_elevated():
             self.destroy()
         else:
-            messagebox.showerror("usbdrv", "The elevation request was refused or failed.")
+            messagebox.showerror("fili", "The elevation request was refused or failed.")
 
 
 def main() -> int:
     if sys.platform != "win32":
-        print("usbdrv-gui works on Windows only.", file=sys.stderr)
+        print("fili-gui works on Windows only.", file=sys.stderr)
         return 1
     App().mainloop()
     return 0

@@ -5,7 +5,7 @@ import logging
 import sys
 from typing import Optional
 
-LOGGER_NAME = "usbdrv"
+LOGGER_NAME = "fili"
 LEVELS = {"DEBUG": logging.DEBUG, "INFO": logging.INFO, "WARN": logging.WARNING,
           "WARNING": logging.WARNING, "ERROR": logging.ERROR}
 MAX_OUTPUT_CHARS = 4000
@@ -30,7 +30,7 @@ def parse_level(name: str) -> int:
 
 def setup_logging(level: str = "INFO", log_file: Optional[str] = None, fmt: str = "text",
                   verbose: bool = False, stream=None) -> logging.Logger:
-    """Configura e restituisce il logger 'usbdrv'. Si può chiamare più volte senza problemi (reimposta gli handler)."""
+    """Configura e restituisce il logger 'fili'. Si può chiamare più volte senza problemi (reimposta gli handler)."""
     logger = logging.getLogger(LOGGER_NAME)
     for h in list(logger.handlers):
         logger.removeHandler(h)

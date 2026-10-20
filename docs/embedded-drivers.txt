@@ -7,7 +7,7 @@ with fewer drivers (libwdi accepts any of --with-wdkdir, --with-libusb0, --with-
 you left out. Facts below were checked on 2026-10-13 against the files used for the reference build; it is
 not legal advice.
 
-usbdrv does not modify any of these files. libwdi copies them into the package it generates at run time.
+fili does not modify any of these files. libwdi copies them into the package it generates at run time.
 
 
 1. WinUSB co-installers (Microsoft Windows Driver Kit 8.0, redist\wdf)

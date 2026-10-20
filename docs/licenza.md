@@ -24,15 +24,15 @@
 Cosa abbiamo e non abbiamo fatto: nessuna riga di `zadig.c` è stata copiata o adattata. Per l'elenco delle funzioni
 (`docs/zadig-features.md`) sono stati consultati i testi dei menu (`zadig.rc`), l'esempio `zadig.ini` e, con ricerche
 mirate in `zadig.c`, solo i nomi delle azioni e delle opzioni (es. "Install", "Replace", "Reinstall", "Upgrade",
-`extract_only`, `list_all`). Il codice di usbdrv è stato scritto da zero. Chi vuole una provenienza documentata può far
+`extract_only`, `list_all`). Il codice di fili è stato scritto da zero. Chi vuole una provenienza documentata può far
 rivedere il confronto a una persona che non ha visto il sorgente di Zadig.
-**Template INF (risolto).** La prima versione di `INF_TEMPLATE` (`src/usbdrv/extract.py`) era stata scritta da chi aveva
+**Template INF (risolto).** La prima versione di `INF_TEMPLATE` (`src/fili/extract.py`) era stata scritta da chi aveva
 visto anche `libwdi/winusb.inf.in` (LGPL). È stata **riscritta da zero** da chi non ha consultato quel file (la riscrittura è stata fatta in una sessione che non ha mai letto `winusb.inf.in`), partendo dalla struttura documentata da Microsoft in «WinUSB (Winusb.sys) Installation»
 (`Include/Needs = winusb.inf`, sezioni `.Services`, `.Wdf`, `.HW`). Le direttive e i nomi di sezione sono quelli imposti dal
 formato INF; testo, commenti, nomi delle sezioni locali e valori sono nostri; rimossi `ClassInstall32` e i co-installer (inutili
 su Windows 10/11). La provenienza è scritta nel commento sopra `INF_TEMPLATE`. **Validazione con il WDK (11/10/2026).** Eseguito `infverif.exe` 10.0.26100.6584 (WDK 10.0.26100, scaricato dal pacchetto NuGet
 `Microsoft.Windows.WDK.x64`, senza installare nulla) con le modalità `/w` (driver Windows) e `/u` (universale) su un INF generato
-da `usbdrv extract`, con e senza `--wcid`. Esito: **nessun errore e nessun avviso**, a patto di aggiungere una riga
+da `fili extract`, con e senza `--wcid`. Esito: **nessun errore e nessun avviso**, a patto di aggiungere una riga
 `CatalogFile`; senza, resta solo `ERROR(1233) Missing directive CatalogFile`, previsto perché l'INF generato è volutamente
 senza catalogo e senza firma (solo per ispezione). Le prime versioni dell'INF davano anche `WARNING(1324)` (manca
 `PnpLockdown=1`), `WARNING(2083)` (sezioni non usate) e `WARNING(2084)` (servizio `winusb.sys` senza CopyFiles): corretti
@@ -48,7 +48,7 @@ Lo scenario cambia se: (a) si copia codice di libwdi/Zadig nel nostro sorgente; 
 (c) si distribuisce `wdi-simple.exe` insieme al nostro programma (allora valgono gli obblighi LGPL **per quel binario**,
 senza toccare la licenza del nostro codice).
 
-## 3. Opzioni per la licenza di usbdrv
+## 3. Opzioni per la licenza di fili
 
 | Opzione | Pro | Contro |
 |---|---|---|
@@ -64,7 +64,7 @@ clean-room in `CONTRIBUTING.md`).
 
 ## 4. Obblighi per la distribuzione
 
-**Solo sorgenti di usbdrv (senza binari di terzi)** — consigliato per la prima pubblicazione:
+**Solo sorgenti di fili (senza binari di terzi)** — consigliato per la prima pubblicazione:
 - il file `LICENSE` scelto + le intestazioni di copyright;
 - `NOTICE` con le dipendenze (già presente);
 - gli utenti costruiscono da soli `wdi-simple.exe` (nessun obbligo LGPL per noi).
@@ -86,14 +86,23 @@ incorporati con la licenza di ciascuno, **che devi scrivere tu dopo averli verif
 - permettere al destinatario di ricostruire/sostituire la libreria (LGPL-3): documentare come ricompilare (`docs/building-wdi-simple.md`);
 - firmare e pubblicare gli hash dei binari (vedi checklist).
 
-### Decisione: sorgente da compilare, non binario
+### Aggiornamento (20/10/2026): installer con binari
+
+Per chi vuole solo installare e usare, `scripts/build_installer.ps1` produce `dist/installer/fili-setup-<versione>.exe` (Inno
+Setup) che include `wdi-simple.exe` e quindi **accetta gli obblighi della tabella seguente**: usa il pacchetto di
+`package_wdi_bundle.py` (testi LGPL/GPL, `NOTICE`, offerta scritta e sorgente di libwdi 1.5.1) più il **sorgente di
+libusb-win32 1.4.0.0** (`libusb0.sys` è GPL; hash fissato nello script), e mostra `packaging/INSTALLER_NOTICE.txt`. L'installer
+copia soltanto file. **Non risolto, da verificare prima di pubblicarlo:** le condizioni dei co-installer WinUSB del WDK (manleva
+verso Microsoft; i destinatari devono accettare termini che proteggano Microsoft almeno quanto i suoi). Non è una consulenza legale.
+
+### Decisione originale: sorgente da compilare, non binario
 
 Nel repository e nel pacchetto Python **non c'è nessun binario di terzi**: `wdi-simple.exe` si scarica e si compila con
 `scripts/fetch_wdi_deps.ps1` e `scripts/build_wdi_simple.sh` (`docs/building-wdi-simple.md`). Così gli obblighi sotto
 ricadono su chi compila e poi distribuisce il proprio binario, non su questo progetto. Un binario pronto si può offrire a
 parte (una "release" con il pacchetto di `package_wdi_bundle.py`) solo accettando gli obblighi della tabella seguente.
-**Sostituibilità (LGPL-3):** `wdi-simple.exe` resta un file separato che `usbdrv` lancia come programma esterno
-(`--wdi`, `$USBDRV_WDI`, config): chiunque può sostituirlo con una propria compilazione di libwdi senza toccare `usbdrv`.
+**Sostituibilità (LGPL-3):** `wdi-simple.exe` resta un file separato che `fili` lancia come programma esterno
+(`--wdi`, `$FILI_WDI`, config): chiunque può sostituirlo con una propria compilazione di libwdi senza toccare `fili`.
 
 ### Driver incorporabili (verificati il 13/10/2026; elenco completo in `docs/embedded-drivers.txt`)
 
@@ -107,7 +116,7 @@ parte (una "release" con il pacchetto di `package_wdi_bundle.py`) solo accettand
 **Come lo gestisce Zadig (solo comportamento osservato, nessun codice o testo copiato):** il programma ha una finestra di
 informazioni con i componenti e la licenza di ciascuno, il testo completo delle licenze, e dichiara che i driver sono
 ridistribuibili con i loro termini. Facciamo lo stesso in tre punti: (1) `docs/embedded-drivers.txt` finisce nel pacchetto come
-`THIRD_PARTY/embedded-drivers.txt`; (2) `usbdrv licenses` stampa componenti e licenze senza toccare il sistema; (3) i testi
+`THIRD_PARTY/embedded-drivers.txt`; (2) `fili licenses` stampa componenti e licenze senza toccare il sistema; (3) i testi
 delle licenze stanno in `LICENSES/`. Strada che riduce gli obblighi: compilare `wdi-simple.exe` con **un solo gruppo di
 driver** (libwdi accetta anche solo `--with-libusbk`) e togliere dall'elenco gli altri.
 

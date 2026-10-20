@@ -6,6 +6,7 @@ Esecuzione:  python -I tests/test_filter.py        (dalla radice del repository)
 import json
 import os
 import sys
+import tempfile
 import types
 import unittest
 
@@ -13,9 +14,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
 
-from test_usbdrv import FakeRun, call  # noqa: E402  (disattiva anche l'esecutore vero)
+from test_fili import FakeRun, call, fake_wdi  # noqa: E402  (disattiva anche l'esecutore vero)
 
-from usbdrv import ops  # noqa: E402
+from fili import ops  # noqa: E402
 
 STICK = {"InstanceId": "USB\\VID_0951&PID_1666\\SER1", "Class": "USB", "Status": "Error", "FriendlyName": "Stick",
          "ProblemCode": 39, "Service": "USBSTOR", "InfPath": "usbstor.inf", "Provider": "Microsoft"}
@@ -70,6 +71,30 @@ class TestFilterRestore(unittest.TestCase):
     def test_unsafe_instance_id_is_rejected(self):
         with self.assertRaises(ValueError):
             ops.filter_removal_commands(types.SimpleNamespace(instance_id="USB\\X'; calc; '"), ["libusb0"])
+
+
+class TestFilterInstall(unittest.TestCase):
+    def test_driver_stays_the_original_one(self):
+        """Con --filter libusb0 è un filtro superiore: il servizio del dispositivo resta USBSTOR e non è un errore."""
+        healthy = dict(STICK, Status="OK", ProblemCode=0)
+        with tempfile.TemporaryDirectory() as tmp:
+            run = FakeRun(devices_json=[healthy], after=[healthy])
+            argv = ["install", "--vid", "0951", "--pid", "1666", "--driver", "libusb-win32", "--filter", "--force",
+                    "--wdi", fake_wdi(tmp), "--yes"]
+            code, out, err, run = call(argv, run=run, admin=True)
+        self.assertEqual(code, 0, err)
+        self.assertIn("--filter", run.mutating()[0])
+        self.assertIn("driver 'USBSTOR'", out)
+
+    def test_without_filter_the_service_is_still_checked(self):
+        healthy = dict(STICK, Status="OK", ProblemCode=0)
+        with tempfile.TemporaryDirectory() as tmp:
+            run = FakeRun(devices_json=[healthy], after=[healthy])
+            argv = ["install", "--vid", "0951", "--pid", "1666", "--driver", "libusb-win32", "--force",
+                    "--wdi", fake_wdi(tmp), "--yes"]
+            code, out, err, run = call(argv, run=run, admin=True)
+        self.assertEqual(code, 6)
+        self.assertIn("expected 'libusb0'", err)
 
 
 if __name__ == "__main__":

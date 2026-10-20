@@ -1,7 +1,7 @@
-usbdrv - third-party components and licenses
+fili - third-party components and licenses
 ============================================
 
-usbdrv does not include or link any third-party code. It runs the following programs as separate
+fili does not include or link any third-party code. It runs the following programs as separate
 processes, only if the user supplies them:
 
 1. libwdi / wdi-simple.exe  (https://github.com/pbatard/libwdi)
@@ -20,7 +20,7 @@ processes, only if the user supplies them:
 2. Windows components called by name: PowerShell, pnputil.exe, setupapi.dev.log. Part of Windows.
 
 Not used, not copied: Zadig (examples/zadig.c, GNU GPL v3 or later). Its behaviour was studied only to
-document which features usbdrv offers (docs/zadig-features.md).
+document which features fili offers (docs/zadig-features.md).
 
 Driver binaries that libwdi may embed when YOU build it (not in this repository). Licenses checked on
 2026-10-13, details and SHA-256 in docs/embedded-drivers.txt:
@@ -30,7 +30,7 @@ Driver binaries that libwdi may embed when YOU build it (not in this repository)
   * libusbK 3.1.0.0: dual license, New BSD or GPL (we choose BSD: LICENSES/BSD-3-Clause-libusbK.txt,
     copyright (c) 2011-2012 Travis Lee Robinson).
   * usbser: in-box Windows driver, not redistributed.
-Run 'usbdrv licenses' to print this list. Before distributing a binary, list only the drivers it really
+Run 'fili licenses' to print this list. Before distributing a binary, list only the drivers it really
 contains (docs/embedded-drivers.txt) and follow docs/licenza.md section 4.
 
-usbdrv itself: MIT License, Copyright (c) 2026 PyLuke73 (see LICENSE and docs/licenza.md).
+fili itself: MIT License, Copyright (c) 2026 PyLuke73 (see LICENSE and docs/licenza.md).

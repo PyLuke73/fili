@@ -4,10 +4,12 @@ Tutto qui dentro si limita a COSTRUIRE righe di comando. Nessuna funzione di que
 l'esecuzione è decisa da cli.py dopo i controlli di sicurezza (--yes, amministratore, ...).
 """
 
+import base64
 import json
 import os
 import re
 import shutil
+import sys
 from dataclasses import dataclass
 from typing import Callable, List, Optional
 
@@ -17,7 +19,7 @@ from .devices import UsbDevice
 # build di wdi-simple lo include. Non provato qui.
 DRIVERS = {"winusb": 0, "libusb-win32": 1, "libusbk": 2, "usbser": 3}
 
-# Nome del servizio Windows -> nome del driver usbdrv (usato da 'reinstall')
+# Nome del servizio Windows -> nome del driver fili (usato da 'reinstall')
 SERVICE_TO_DRIVER = {"winusb": "winusb", "libusb0": "libusb-win32", "libusbk": "libusbk", "usbser": "usbser"}
 
 # Classi di dispositivi di cui quasi certamente non si vuole sostituire il driver per errore.
@@ -105,15 +107,17 @@ def filter_removal_commands(dev: UsbDevice, filters: List[str]) -> List[List[str
 
 
 def find_wdi(explicit: Optional[str], env: dict, base_dir: str) -> Optional[str]:
-    """Trova wdi-simple.exe: --wdi / config, $USBDRV_WDI, PATH, <progetto>/build/."""
-    for cand in (explicit, env.get("USBDRV_WDI")):
+    """Trova wdi-simple.exe: --wdi / config, $FILI_WDI, PATH, accanto all'eseguibile (versione compilata), <progetto>/build/."""
+    for cand in (explicit, env.get("FILI_WDI")):
         if cand:
             return cand if os.path.isfile(cand) else None
     on_path = shutil.which("wdi-simple") or shutil.which("wdi-simple.exe")
     if on_path:
         return on_path
-    local = os.path.join(base_dir, "build", "wdi-simple.exe")
-    return local if os.path.isfile(local) else None
+    candidates = [os.path.join(base_dir, "build", "wdi-simple.exe")]
+    if getattr(sys, "frozen", False):
+        candidates.insert(0, os.path.join(os.path.dirname(sys.executable), "wdi-simple.exe"))
+    return next((c for c in candidates if os.path.isfile(c)), None)
 
 
 def check_protected(dev: UsbDevice) -> Optional[str]:
@@ -136,15 +140,24 @@ def clean_name(name: str) -> str:
     return re.sub(r"[^\w .()-]", "_", name or "USB device").strip()[:60] or "USB device"
 
 
+def siblings(dev: UsbDevice, all_devices: List[UsbDevice]) -> List[UsbDevice]:
+    """Gli ALTRI dispositivi presenti con lo stesso VID/PID (e interfaccia): wdi-simple li cambia tutti insieme a dev."""
+    return [d for d in all_devices
+            if d.instance_id.lower() != dev.instance_id.lower()
+            and d.vid == dev.vid and d.pid == dev.pid and d.mi == dev.mi]
+
+
 def install_command(wdi: str, dev: UsbDevice, driver: str, dest: str, *, name: Optional[str] = None,
                     wcid: bool = False, silent: bool = False, timeout_ms: Optional[int] = None,
-                    filter_driver: bool = False, log_level: int = 3) -> List[str]:
+                    filter_driver: bool = False, log_level: int = 3, extract_only: bool = False) -> List[str]:
     """Riga di comando per wdi-simple (libwdi). Sostituisce il driver di UNA interfaccia/dispositivo.
 
     NOTA: il wdi-simple originale autofirma sempre il catalogo e aggiunge il certificato agli archivi
-    Root e TrustedPublisher, anche con la sola estrazione. usbdrv non lo chiama mai con -x.
+    Root e TrustedPublisher, anche con la sola estrazione (-x). Senza -x installa il driver su TUTTI i
+    dispositivi presenti con lo stesso VID/PID: per sceglierne uno solo usare extract_only=True e poi
+    stage_command() + bind_command().
     """
-    cmd = [wdi, "-n", clean_name(name or dev.name), "-f", "usbdrv.inf",
+    cmd = [wdi, "-n", clean_name(name or dev.name), "-f", "fili.inf",
            "-v", "0x%04X" % dev.vid, "-p", "0x%04X" % dev.pid,
            "-t", str(DRIVERS[driver]), "-d", dest, "-l", str(log_level)]
     if dev.mi is not None:
@@ -157,7 +170,113 @@ def install_command(wdi: str, dev: UsbDevice, driver: str, dest: str, *, name: O
         cmd.append("-s")
     if timeout_ms is not None:
         cmd += ["-o", str(timeout_ms)]
+    if extract_only:
+        cmd.append("-x")
     return cmd
+
+
+PUBLISHED_RE = re.compile(r"\boem\d+\.inf\b", re.IGNORECASE)
+
+# DiInstallDevice installa un driver su UN dispositivo (a differenza di pnputil /add-driver /install e di
+# UpdateDriverForPlugAndPlayDevices, che aggiornano tutti i dispositivi con quell'ID hardware). Il pacchetto è già
+# nell'archivio driver (pnputil /add-driver): DI_ENUMSINGLEINF limita l'elenco dei driver compatibili a quell'INF,
+# quindi non può vincere un altro pacchetto con lo stesso ID hardware.
+BIND_CSHARP = r"""
+using System;
+using System.Runtime.InteropServices;
+public static class FiliBind {
+  [StructLayout(LayoutKind.Sequential)]
+  struct DevInfoData { public int cbSize; public Guid ClassGuid; public int DevInst; public IntPtr Reserved; }
+  [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Unicode)]
+  struct DrvInfoData {
+    public int cbSize; public int DriverType; public IntPtr Reserved;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)] public string Description;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)] public string MfgName;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)] public string ProviderName;
+    public long DriverDate; public ulong DriverVersion;
+  }
+  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+  struct InstallParams {
+    public int cbSize; public int Flags; public int FlagsEx; public IntPtr hwndParent;
+    public IntPtr InstallMsgHandler; public IntPtr InstallMsgHandlerContext; public IntPtr FileQueue;
+    public IntPtr ClassInstallReserved; public int Reserved;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public string DriverPath;
+  }
+  [DllImport("setupapi.dll", SetLastError = true)] static extern IntPtr SetupDiCreateDeviceInfoList(IntPtr g, IntPtr h);
+  [DllImport("setupapi.dll", SetLastError = true)] static extern bool SetupDiDestroyDeviceInfoList(IntPtr s);
+  [DllImport("setupapi.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+  static extern bool SetupDiOpenDeviceInfoW(IntPtr s, string id, IntPtr h, int f, ref DevInfoData d);
+  [DllImport("setupapi.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+  static extern bool SetupDiGetDeviceInstallParamsW(IntPtr s, ref DevInfoData d, ref InstallParams p);
+  [DllImport("setupapi.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+  static extern bool SetupDiSetDeviceInstallParamsW(IntPtr s, ref DevInfoData d, ref InstallParams p);
+  [DllImport("setupapi.dll", SetLastError = true)]
+  static extern bool SetupDiBuildDriverInfoList(IntPtr s, ref DevInfoData d, int type);
+  [DllImport("setupapi.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+  static extern bool SetupDiEnumDriverInfoW(IntPtr s, ref DevInfoData d, int type, int idx, ref DrvInfoData i);
+  [DllImport("newdev.dll", SetLastError = true)]
+  static extern bool DiInstallDevice(IntPtr hwnd, IntPtr s, ref DevInfoData d, ref DrvInfoData i, int flags, out bool reboot);
+
+  static string Code() {
+    int e = Marshal.GetLastWin32Error();
+    return "0x" + e.ToString("X8") + (e == unchecked((int)0xE000020B) ? ", device no longer present" : "");
+  }
+  static void Fail(string what) {
+    throw new Exception(what + " failed (error " + Code() + ")");
+  }
+  public static string Run(string instanceId, string infPath) {
+    IntPtr set = SetupDiCreateDeviceInfoList(IntPtr.Zero, IntPtr.Zero);
+    if (set == (IntPtr)(-1)) Fail("SetupDiCreateDeviceInfoList");
+    try {
+      var dev = new DevInfoData(); dev.cbSize = Marshal.SizeOf(typeof(DevInfoData));
+      if (!SetupDiOpenDeviceInfoW(set, instanceId, IntPtr.Zero, 0, ref dev)) Fail("SetupDiOpenDeviceInfo");
+      var prm = new InstallParams(); prm.cbSize = Marshal.SizeOf(typeof(InstallParams));
+      if (!SetupDiGetDeviceInstallParamsW(set, ref dev, ref prm)) Fail("SetupDiGetDeviceInstallParams");
+      prm.Flags |= 0x00010000;   // DI_ENUMSINGLEINF
+      prm.DriverPath = infPath;
+      if (!SetupDiSetDeviceInstallParamsW(set, ref dev, ref prm)) Fail("SetupDiSetDeviceInstallParams");
+      if (!SetupDiBuildDriverInfoList(set, ref dev, 2)) Fail("SetupDiBuildDriverInfoList");   // SPDIT_COMPATDRIVER
+      var drv = new DrvInfoData(); drv.cbSize = Marshal.SizeOf(typeof(DrvInfoData));
+      if (!SetupDiEnumDriverInfoW(set, ref dev, 2, 0, ref drv))
+        throw new Exception("no driver in " + infPath + " matches this device (error " + Code() + ")");
+      bool reboot;
+      if (!DiInstallDevice(IntPtr.Zero, set, ref dev, ref drv, 0, out reboot)) Fail("DiInstallDevice");
+      return "installed '" + drv.Description + "' (" + drv.ProviderName + ") on " + instanceId + (reboot ? "; reboot required" : "");
+    } finally { SetupDiDestroyDeviceInfoList(set); }
+  }
+}
+"""
+
+
+def stage_command(inf: str) -> List[str]:
+    """Mette il pacchetto nell'archivio driver SENZA associarlo a nessun dispositivo (niente /install)."""
+    return ["pnputil", "/add-driver", inf]
+
+
+def published_name(output: str) -> Optional[str]:
+    """Il nome 'oemNN.inf' con cui pnputil ha pubblicato il pacchetto (l'output è localizzato: si cerca solo il nome)."""
+    m = PUBLISHED_RE.search(output or "")
+    return m.group(0).lower() if m else None
+
+
+def bind_command(dev: UsbDevice, published: str, windir: str) -> List[str]:
+    """Installa il pacchetto già nell'archivio driver su UN SOLO dispositivo (per instance ID)."""
+    if not INSTANCE_SAFE_RE.match(dev.instance_id):
+        raise ValueError("unexpected characters in the instance ID: %r" % dev.instance_id)
+    if not OEM_INF_RE.match(published):
+        raise ValueError("unexpected published package name: %r" % published)
+    inf = os.path.join(windir, "INF", published).replace("'", "''")   # windir viene dall'ambiente: niente apici liberi
+    script = ("$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'\n"
+              "try {\n"
+              "  Add-Type -TypeDefinition @'\n%s'@\n"
+              "  [FiliBind]::Run('%s', '%s')\n"
+              "} catch {\n"
+              "  $e = $_.Exception; while ($e.InnerException) { $e = $e.InnerException }\n"
+              "  [Console]::Error.WriteLine($e.Message); exit 1\n"
+              "}\n"
+              % (BIND_CSHARP, dev.instance_id, inf))
+    encoded = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
+    return ["powershell", "-NoProfile", "-NonInteractive", "-OutputFormat", "Text", "-EncodedCommand", encoded]
 
 
 def is_libwdi_package(dev: UsbDevice) -> bool:

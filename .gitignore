@@ -7,6 +7,6 @@ __pycache__/
 *.pyc
 # local runtime files
 *.log
-usbdrv.toml
+fili.toml
 usb_driver/
-usbdrv_*/
+fili_*/

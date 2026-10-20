@@ -20,12 +20,12 @@ import sys
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(ROOT, "src"))
 
-from usbdrv import cli  # noqa: E402
+from fili import cli  # noqa: E402
 
 DRIVERS = ("winusb", "libusbk", "libusb-win32")
 
 
-def usbdrv(argv, log):
+def fili(argv, log):
     """Esegue la CLI nello stesso processo con --json; restituisce (codice di uscita, documento)."""
     import io
     out, err = io.StringIO(), io.StringIO()
@@ -86,9 +86,9 @@ def main():
     facts = platform_facts()
     print(json.dumps(facts, indent=2))
     start = ps("(Get-Date).ToString('s')")
-    certs_before = {(c["store"], c["thumbprint"]) for c in (usbdrv(["cert-remove"], a.log)[1].get("data") or [])}
+    certs_before = {(c["store"], c["thumbprint"]) for c in (fili(["cert-remove"], a.log)[1].get("data") or [])}
 
-    code, doc = usbdrv(["status"] + target, a.log)
+    code, doc = fili(["status"] + target, a.log)
     if code != 0:
         print("Device not usable:", doc.get("error"))
         return code
@@ -97,9 +97,9 @@ def main():
 
     rows, failed = [], False
     for drv in DRIVERS:
-        c1, d1 = usbdrv(["install", "--driver", drv, "--yes"] + target + force, a.log)
+        c1, d1 = fili(["install", "--driver", drv, "--yes"] + target + force, a.log)
         now = (d1.get("data") or {}).get("after") or {}
-        c2, d2 = usbdrv(["restore", "--yes"] + target + force, a.log)
+        c2, d2 = fili(["restore", "--yes"] + target + force, a.log)
         back = (d2.get("data") or {}).get("after") or {}
         ok = c1 == 0 and c2 == 0 and back.get("service", "").lower() == first["service"].lower()
         failed |= not ok
@@ -115,11 +115,11 @@ def main():
     print("\nCode Integrity events during the run:\n" + (events or "  none"))
 
     # rimuove solo i certificati creati da questa esecuzione
-    for c in (usbdrv(["cert-remove"], a.log)[1].get("data") or []):
+    for c in (fili(["cert-remove"], a.log)[1].get("data") or []):
         if (c["store"], c["thumbprint"]) not in certs_before:
-            usbdrv(["cert-remove", "--thumbprint", c["thumbprint"], "--yes"], a.log)
+            fili(["cert-remove", "--thumbprint", c["thumbprint"], "--yes"], a.log)
             print("removed certificate %s (%s)" % (c["thumbprint"], c["subject"]))
-    code, doc = usbdrv(["status"] + target, a.log)
+    code, doc = fili(["status"] + target, a.log)
     end = (doc.get("data") or {}).get("device") or {}
     print("End: %s / %s / %s   (log: %s)" % (end.get("service"), end.get("inf_path"), end.get("provider"), a.log))
     return 1 if failed else 0

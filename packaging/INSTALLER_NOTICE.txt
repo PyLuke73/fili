@@ -1,0 +1,26 @@
+fili - read before installing / leggere prima di installare
+=============================================================
+
+This installer only copies files (fili.exe, fili-gui.exe, wdi-simple.exe, licenses). It does NOT change any
+driver and does NOT add any certificate to this PC. L'installazione copia solo file: non cambia driver e non
+aggiunge certificati.
+
+WHEN YOU USE fili (not now):
+  * Installing a WinUSB / libusbK / libusb-win32 driver creates a SELF-SIGNED certificate and adds it to the
+    machine's Root and TrustedPublisher stores. Anything signed with it is then trusted by this PC.
+    "fili cert-remove" lists and removes those certificates.
+  * It needs Administrator rights and replaces the driver of the device you select. A wrong target can disable
+    your keyboard, mouse, disk or Bluetooth (fili refuses those classes unless you pass --force).
+  * Use it only on devices you own. "fili restore" undoes a driver change.
+  * Quando lo usi (non ora): crea un certificato AUTOFIRMATO nei repository Root e TrustedPublisher del PC e
+    sostituisce il driver del dispositivo scelto. Usalo solo su dispositivi tuoi; "fili restore" annulla.
+
+THIRD-PARTY COMPONENTS INCLUDED IN THIS PACKAGE / COMPONENTI DI TERZI INCLUSI
+  * wdi-simple.exe, built from libwdi 1.5.1 (GNU LGPL v3 or later). Corresponding source and the written offer:
+    THIRD_PARTY\libwdi-1.5.1.tar.gz and THIRD_PARTY\libwdi-SOURCE.txt. You may replace wdi-simple.exe with your
+    own build of libwdi: fili runs it as a separate program (see docs\building-wdi-simple.md).
+  * Drivers embedded in wdi-simple.exe: libusb-win32 1.4.0.0 (libusb0.sys under the GPL; source in
+    THIRD_PARTY\libusb-win32-release_1.4.0.0-source.zip), libusbK 3.1.0.0 (New BSD licence) and the Microsoft
+    WinUSB co-installers from the WDK 8.0 (Microsoft Windows Driver Frameworks 1.11 terms; only for old
+    Windows versions). Licences and conditions: THIRD_PARTY\embedded-drivers.txt and the LICENSES folder.
+  * fili itself is under the MIT licence (LICENSE). No warranty / Nessuna garanzia.

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Build wdi-simple.exe (libwdi v1.5.1, x64) with MSYS2 MinGW-w64, WITHOUT autotools and WITHOUT make.
-# Status: PROVEN on the author's Windows 11 machine (gcc 14.2.0 ucrt64). See docs/building-wdi-simple.md.
+# Status: PROVEN on a Windows 11 machine (gcc 14.2.0 ucrt64). See docs/building-wdi-simple.md.
 #
 # Steps:  1) powershell -File scripts/fetch_wdi_deps.ps1      (download + unpack the driver files, installs nothing)
 #         2) scripts/build_wdi_simple.sh                       (this script; run it from an MSYS2/Git Bash shell)
 # Result: build/wdi-simple.exe   (git-ignored). Nothing is installed or run: the exe is only compiled.
 #
-# Why not ./configure: the MSYS2 package mirrors failed TLS verification on the author's PC, so autoconf/automake could
+# Why not ./configure: the MSYS2 package mirrors failed TLS verification on the build PC, so autoconf/automake could
 # not be installed (verification was not disabled). The build is the one in libwdi/Makefile.am, written out by hand.
 set -euo pipefail
 export PATH=/c/msys64/ucrt64/bin:/c/msys64/usr/bin:$PATH

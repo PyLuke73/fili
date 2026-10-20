@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "usbdrv"
+name = "fili"
 version = "0.1.0"
 description = "Replace the driver of a USB device/interface from the command line (Windows), like Zadig but scriptable"
 readme = "README.md"
@@ -12,10 +12,10 @@ license = { text = "MIT" }
 classifiers = ["Operating System :: Microsoft :: Windows", "Environment :: Console"]
 
 [project.scripts]
-usbdrv = "usbdrv.cli:main"
+fili = "fili.cli:main"
 
 [project.gui-scripts]
-usbdrv-gui = "usbdrv.gui:main"
+fili-gui = "fili.gui:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

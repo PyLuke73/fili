@@ -1,6 +1,6 @@
-"""File di configurazione facoltativo (usbdrv.toml), l'equivalente dello zadig.ini di Zadig.
+"""File di configurazione facoltativo (fili.toml), l'equivalente dello zadig.ini di Zadig.
 
-Ordine di ricerca: --config PATH, ./usbdrv.toml, <APPDATA>/usbdrv/usbdrv.toml.
+Ordine di ricerca: --config PATH, ./fili.toml, <APPDATA>/fili/fili.toml.
 Le opzioni da riga di comando prevalgono sempre sul file. Il file non può mai contenere
 una conferma: --yes va indicato sulla riga di comando.
 """
@@ -21,10 +21,10 @@ DEFAULTS = {
 }
 
 SAMPLE = """\
-# usbdrv.toml - defaults for usbdrv. Command-line options override these.
+# fili.toml - defaults for fili. Command-line options override these.
 [general]
 log_level  = "INFO"      # DEBUG | INFO | WARN | ERROR
-# log_file = "usbdrv.log"
+# log_file = "fili.log"
 log_format = "text"      # text | json
 silent     = false       # reduce console output
 
@@ -53,10 +53,10 @@ def candidate_paths(explicit: Optional[str], env: dict, cwd: str):
     if explicit:
         yield explicit
         return
-    yield os.path.join(cwd, "usbdrv.toml")
+    yield os.path.join(cwd, "fili.toml")
     appdata = env.get("APPDATA")
     if appdata:
-        yield os.path.join(appdata, "usbdrv", "usbdrv.toml")
+        yield os.path.join(appdata, "fili", "fili.toml")
 
 
 def load_config(explicit: Optional[str] = None, env: Optional[dict] = None, cwd: Optional[str] = None) -> dict:
@@ -69,7 +69,7 @@ def load_config(explicit: Optional[str] = None, env: Optional[dict] = None, cwd:
                 raise ConfigError("config file not found: %s" % path)
             continue
         if tomllib is None:
-            raise ConfigError("reading usbdrv.toml needs Python 3.11+")
+            raise ConfigError("reading fili.toml needs Python 3.11+")
         try:
             with open(path, "rb") as f:
                 data = tomllib.load(f)

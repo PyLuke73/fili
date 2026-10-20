@@ -1,4 +1,4 @@
-"""Riga di comando di usbdrv.
+"""Riga di comando di fili.
 
 Codici di uscita
   0 ok            1 errore imprevisto     2 argomenti non validi / rifiutato da una regola di sicurezza
@@ -41,9 +41,9 @@ WARNING - read before continuing
   * This REPLACES the driver of the single interface/device shown above.
   * libwdi builds a driver package signed with a SELF-SIGNED certificate and adds that
     certificate to this PC's trusted stores (Root and TrustedPublisher). Anything signed
-    with it is then trusted by this machine. Remove it later with 'usbdrv cert-remove'.
+    with it is then trusted by this machine. Remove it later with 'fili cert-remove'.
   * Needs Administrator rights. Use only on devices you own and understand.
-  * Undo the driver change with 'usbdrv restore'."""
+  * Undo the driver change with 'fili restore'."""
 
 
 RESTORE_MAX_PASSES = 5
@@ -154,7 +154,7 @@ class Out:
 
 def _common(p: argparse.ArgumentParser) -> None:
     S = argparse.SUPPRESS
-    p.add_argument("--config", default=S, help="path of usbdrv.toml")
+    p.add_argument("--config", default=S, help="path of fili.toml")
     p.add_argument("--log-file", default=S, help="write a timestamped log here")
     p.add_argument("--log-level", default=S, help="DEBUG, INFO, WARN, ERROR (default INFO)")
     p.add_argument("--log-format", default=S, choices=["text", "json"], help="log file format")
@@ -173,88 +173,88 @@ def _target(p: argparse.ArgumentParser, required: bool = True) -> None:
 _EXAMPLES = {
     "main": """\
 Examples (1234:5678 stands for the VID:PID of your device):
-  usbdrv list                                   show the USB devices and their drivers
-  usbdrv status --vid 1234 --pid 5678           show the driver bound to a device
-  usbdrv install --vid 1234 --pid 5678 --driver winusb --dry-run
+  fili list                                   show the USB devices and their drivers
+  fili status --vid 1234 --pid 5678           show the driver bound to a device
+  fili install --vid 1234 --pid 5678 --driver winusb --dry-run
                                                 show what would be done, run nothing
-  usbdrv install --vid 1234 --pid 5678 --driver winusb --yes
+  fili install --vid 1234 --pid 5678 --driver winusb --yes
                                                 replace the driver (Administrator)
-  usbdrv diagnose --vid 1234 --pid 5678         why does the driver fail to start?
+  fili diagnose --vid 1234 --pid 5678         why does the driver fail to start?
 
-Run 'usbdrv <command> --help' for the options and examples of each command.
+Run 'fili <command> --help' for the options and examples of each command.
 """,
     "list": """\
 Examples:
-  usbdrv list                          devices that are present now
-  usbdrv list --only-no-driver         only devices that have no driver
-  usbdrv list --hubs --parents         include hubs and composite parents
-  usbdrv list --json                   machine-readable output
+  fili list                          devices that are present now
+  fili list --only-no-driver         only devices that have no driver
+  fili list --hubs --parents         include hubs and composite parents
+  fili list --json                   machine-readable output
 """,
     "status": """\
 Examples:
-  usbdrv status --vid 1234 --pid 5678
-  usbdrv status --vid 1234 --pid 5678 --iface 1          one interface of a composite device
-  usbdrv status --vid 1234 --pid 5678 --instance "USB\\VID_1234&PID_5678\\SERIAL1"
+  fili status --vid 1234 --pid 5678
+  fili status --vid 1234 --pid 5678 --iface 1          one interface of a composite device
+  fili status --vid 1234 --pid 5678 --instance "USB\\VID_1234&PID_5678\\SERIAL1"
                                                          one of several identical devices
 """,
     "install": """\
 Examples:
-  usbdrv install --vid 1234 --pid 5678 --driver winusb --dry-run
+  fili install --vid 1234 --pid 5678 --driver winusb --dry-run
       print the plan and the command, execute nothing (start here)
-  usbdrv install --vid 1234 --pid 5678 --driver winusb --yes
+  fili install --vid 1234 --pid 5678 --driver winusb --yes
       replace the driver (needs Administrator and --yes)
-  usbdrv install --vid 1234 --pid 5678 --iface 1 --driver libusbk --yes
+  fili install --vid 1234 --pid 5678 --iface 1 --driver libusbk --yes
       replace the driver of interface 1 only
-  usbdrv install --vid 1234 --pid 5678 --driver winusb --name "My device" --yes
+  fili install --vid 1234 --pid 5678 --driver winusb --name "My device" --yes
       set the device name written in the INF
-  usbdrv --log-file usbdrv.log -v install --vid 1234 --pid 5678 --driver winusb --yes
+  fili --log-file fili.log -v install --vid 1234 --pid 5678 --driver winusb --yes
       keep a timestamped log of the run
 
 The driver is signed with a self-signed certificate that is added to this PC's trusted
-stores: see 'usbdrv cert-remove --help' to list and remove it.
+stores: see 'fili cert-remove --help' to list and remove it.
 """,
     "reinstall": """\
 Examples:
-  usbdrv reinstall --vid 1234 --pid 5678 --dry-run
-  usbdrv reinstall --vid 1234 --pid 5678 --iface 1 --yes
+  fili reinstall --vid 1234 --pid 5678 --dry-run
+  fili reinstall --vid 1234 --pid 5678 --iface 1 --yes
 """,
     "restore": """\
 Examples:
-  usbdrv restore --vid 1234 --pid 5678 --dry-run         show what would be removed
-  usbdrv restore --vid 1234 --pid 5678 --yes             go back to the original driver
-  usbdrv restore --vid 1234 --pid 5678 --iface 1 --yes   one interface only
+  fili restore --vid 1234 --pid 5678 --dry-run         show what would be removed
+  fili restore --vid 1234 --pid 5678 --yes             go back to the original driver
+  fili restore --vid 1234 --pid 5678 --iface 1 --yes   one interface only
 """,
     "extract": """\
 Examples:
-  usbdrv extract --vid 1234 --pid 5678 --out pkg          write pkg\\usbdrv.inf (unsigned)
-  usbdrv extract --vid 1234 --pid 5678 --iface 1 --out pkg
-  usbdrv extract --vid 1234 --pid 5678 --wcid --out pkg   match the WCID compatible ID
+  fili extract --vid 1234 --pid 5678 --out pkg          write pkg\\fili.inf (unsigned)
+  fili extract --vid 1234 --pid 5678 --iface 1 --out pkg
+  fili extract --vid 1234 --pid 5678 --wcid --out pkg   match the WCID compatible ID
 
 Nothing is installed and no certificate is created: the INF is only for inspection.
 """,
     "diagnose": """\
 Examples:
-  usbdrv diagnose                                    all devices that report a problem
-  usbdrv diagnose --vid 1234 --pid 5678              one device
-  usbdrv diagnose --vid 1234 --pid 5678 --since 2h   only events of the last 2 hours
-  usbdrv diagnose --vid 1234 --pid 5678 --last 10 --no-events
-  usbdrv --json diagnose --vid 1234 --pid 5678       machine-readable output
+  fili diagnose                                    all devices that report a problem
+  fili diagnose --vid 1234 --pid 5678              one device
+  fili diagnose --vid 1234 --pid 5678 --since 2h   only events of the last 2 hours
+  fili diagnose --vid 1234 --pid 5678 --last 10 --no-events
+  fili --json diagnose --vid 1234 --pid 5678       machine-readable output
 """,
     "cert-remove": """\
 Examples:
-  usbdrv cert-remove                                  list the certificates (changes nothing)
-  usbdrv cert-remove --thumbprint <40 hex> --dry-run  show what would be removed
-  usbdrv cert-remove --thumbprint <40 hex> --yes      remove it (Administrator)
+  fili cert-remove                                  list the certificates (changes nothing)
+  fili cert-remove --thumbprint <40 hex> --dry-run  show what would be removed
+  fili cert-remove --thumbprint <40 hex> --yes      remove it (Administrator)
 """,
     "licenses": """\
 Examples:
-  usbdrv licenses                       components and licenses (changes nothing)
-  usbdrv licenses --json                machine-readable output
+  fili licenses                       components and licenses (changes nothing)
+  fili licenses --json                machine-readable output
 """,
     "sample-config": """\
 Examples:
-  usbdrv sample-config > usbdrv.toml
-  usbdrv --config usbdrv.toml list
+  fili sample-config > fili.toml
+  fili --config fili.toml list
 """,
 }
 
@@ -262,12 +262,12 @@ Examples:
 def _build_parser() -> argparse.ArgumentParser:
     raw = argparse.RawDescriptionHelpFormatter
     p = argparse.ArgumentParser(
-        prog="usbdrv", formatter_class=raw,
+        prog="fili", formatter_class=raw,
         epilog=_EXAMPLES["main"] + "\n" + textwrap.fill(
             "Exit codes: " + "; ".join("%d %s" % kv for kv in EXIT_CODES.items()), width=78),
         description="Replace the driver of a USB device/interface from the command line (Windows).\n"
                     "Read-only commands: list, status, diagnose, extract, sample-config and --dry-run.")
-    p.add_argument("--version", action="version", version="usbdrv " + __version__)
+    p.add_argument("--version", action="version", version="fili " + __version__)
     _common(p)
     p.set_defaults(config=None, log_file=None, log_level=None, log_format=None, verbose=False,
                    json=False, silent=None)
@@ -298,10 +298,13 @@ def _build_parser() -> argparse.ArgumentParser:
         s.add_argument("--wcid", action="store_true", default=None, help="WCID driver (match the compatible ID)")
         s.add_argument("--filter", dest="filter_driver", action="store_true", help="libusb-win32 filter driver")
         s.add_argument("--timeout", type=int, dest="timeout_ms", help="ms to wait for pending installations")
-        s.add_argument("--wdi", help="path to wdi-simple.exe (default: config, $USBDRV_WDI, PATH, build/)")
+        s.add_argument("--wdi", help="path to wdi-simple.exe (default: config, $FILI_WDI, PATH, build/)")
         s.add_argument("--yes", action="store_true", help="confirm; without it nothing is executed")
         s.add_argument("--dry-run", action="store_true", help="print the plan and the command, execute nothing")
         s.add_argument("--force", action="store_true", help="allow protected classes (HID, storage, Bluetooth)")
+        s.add_argument("--all-matching", action="store_true",
+                       help="with several identical devices, change ALL of them with one wdi-simple run "
+                            "(default: only the selected instance)")
 
     for name in ("restore", "uninstall"):
         s = add(name, help="remove the OEM driver package of a device and re-detect it"
@@ -332,7 +335,7 @@ def _build_parser() -> argparse.ArgumentParser:
     s.add_argument("--dry-run", action="store_true")
 
     add("licenses", help="list third-party components and their licenses (read-only)")
-    add("sample-config", help="print a sample usbdrv.toml")
+    add("sample-config", help="print a sample fili.toml")
     return p
 
 
@@ -346,7 +349,7 @@ def _logged_run(run: Callable, logger: logging.Logger) -> Callable:
         log_fields(logger, logging.DEBUG if ok else logging.ERROR, "exit %d: %s" % (res.returncode, label),
                    command=label, exit_code=res.returncode)
         if res.stdout:
-            log_fields(logger, logging.DEBUG, "stdout: " + clip(res.stdout), stream="stdout")
+            log_fields(logger, logging.DEBUG if ok else logging.ERROR, "stdout: " + clip(res.stdout), stream="stdout")
         if res.stderr:
             log_fields(logger, logging.DEBUG if ok else logging.ERROR, "stderr: " + clip(res.stderr), stream="stderr")
         return res
@@ -379,12 +382,12 @@ def main(argv: Optional[List[str]] = None, *, run: Optional[Callable] = None,
 
     if run is None:
         if sys.platform != "win32" and args.cmd not in ("sample-config", "licenses"):
-            o.fail("usbdrv works on Windows only.")
+            o.fail("fili works on Windows only.")
             return o.finish(args.cmd, EXIT_ERROR)
         run = _default_run
     run = _logged_run(run, logger)
     admin = is_admin or _default_is_admin
-    log_fields(logger, logging.INFO, "usbdrv %s: %s" % (__version__, args.cmd), command=args.cmd)
+    log_fields(logger, logging.INFO, "fili %s: %s" % (__version__, args.cmd), command=args.cmd)
 
     try:
         code = _dispatch(args, cfg, run, admin, env, o, logger, setupapi_text)
@@ -469,7 +472,7 @@ def _dispatch(args, cfg, run, admin, env, o: Out, logger, setupapi_text) -> int:
     if cmd == "extract":
         return _cmd_extract(args, cfg, dev, o)
     if cmd in ("install", "reinstall"):
-        return _cmd_install(args, cfg, dev, run, admin, env, o)
+        return _cmd_install(args, cfg, dev, devs, run, admin, env, o)
     return _cmd_restore(args, dev, devs, run, admin, o)
 
 
@@ -516,16 +519,37 @@ def _post_check(dev: UsbDevice, expected_service: Optional[str], run, o: Out) ->
         d.service or "-", d.status or "-", d.problem_code, diagnose.describe_cm_code(d.problem_code)))
     o.data = dict(o.data or {}, after=d.to_dict())
     if d.problem_code:
-        o.fail("the device reports a driver problem after the change: %d %s. Run 'usbdrv diagnose'."
+        o.fail("the device reports a driver problem after the change: %d %s. Run 'fili diagnose'."
                % (d.problem_code, diagnose.describe_cm_code(d.problem_code)))
         return EXIT_DRIVER
     if expected_service and d.service.lower() != expected_service:
-        o.fail("the device uses '%s', expected '%s'. Run 'usbdrv diagnose'." % (d.service or "-", expected_service))
+        o.fail("the device uses '%s', expected '%s'. Run 'fili diagnose'." % (d.service or "-", expected_service))
         return EXIT_DRIVER
     return EXIT_OK
 
 
-def _cmd_install(args, cfg, dev, run, admin, env, o: Out) -> int:
+def _run_wdi(build, wcid: bool, run, o: Out):
+    """Esegue wdi-simple (con un secondo tentativo per l'errore -15) e spiega i fallimenti noti.
+    Restituisce (codice, cartella in cui ha estratto il pacchetto)."""
+    dest = tempfile.mkdtemp(prefix="fili_")
+    code = _execute([build(dest)], run, o)
+    if code != EXIT_OK and o.last_rc in WDI_NEEDS_ADMIN:
+        o.error = None
+        o.say("note: libwdi could not start its installer (exit -15). Retrying once; if the terminal is elevated, "
+              "an antivirus scanning the new file is the likely cause.")
+        dest = tempfile.mkdtemp(prefix="fili_")
+        code = _execute([build(dest)], run, o)
+        if code != EXIT_OK and o.last_rc in WDI_NEEDS_ADMIN:
+            o.fail("libwdi reports it cannot run its installer with administrative privileges. Check that "
+                   "the terminal is elevated, then retry; if it still fails, allow the temporary installer in "
+                   "your antivirus.")
+    if code != EXIT_OK and o.last_rc in WDI_EXISTS:
+        o.fail("libwdi found no driver to install for this device (WDI_ERROR_EXISTS)."
+               + (" --wcid only works on devices that advertise the WCID compatible ID: try without it." if wcid else ""))
+    return code, dest
+
+
+def _cmd_install(args, cfg, dev, devs, run, admin, env, o: Out) -> int:
     dcfg = cfg["driver"]
     if args.cmd == "reinstall":
         driver = ops.driver_for_reinstall(dev)
@@ -536,6 +560,13 @@ def _cmd_install(args, cfg, dev, run, admin, env, o: Out) -> int:
     msg = ops.check_protected(dev)
     if msg and not args.force:
         o.fail(msg)
+        return EXIT_USAGE
+    # wdi-simple installa su TUTTI i dispositivi con lo stesso VID/PID: con dei gemelli si installa per singola istanza
+    twins = ops.siblings(dev, devs)
+    single = bool(twins) and not args.all_matching
+    if single and args.filter_driver:
+        o.fail("--filter changes every device with this VID:PID; with identical devices present add --all-matching "
+               "(%d others: %s)." % (len(twins), ", ".join(t.instance_id for t in twins)))
         return EXIT_USAGE
     wdi = ops.find_wdi(args.wdi or cfg["tool"]["wdi_path"], env, _project_dir())
     wcid = dcfg["wcid"] if args.wcid is None else args.wcid
@@ -548,34 +579,69 @@ def _cmd_install(args, cfg, dev, run, admin, env, o: Out) -> int:
     o.say("Tool    : " + (wdi or "wdi-simple.exe NOT FOUND (see docs/building-wdi-simple.md)"))
     o.say("")
     o.say(INSTALL_WARNING)
+    if twins and not single:
+        o.say("  * --all-matching: %d identical device(s) will be changed TOO: %s"
+              % (len(twins), ", ".join(t.instance_id for t in twins)))
 
-    def build(dest):
+    def build(dest, extract_only=False):
         return ops.install_command(wdi or "wdi-simple.exe", dev, driver, dest, name=args.name, wcid=wcid,
-                                   silent=silent, timeout_ms=timeout, filter_driver=args.filter_driver)
+                                   silent=silent, timeout_ms=timeout, filter_driver=args.filter_driver,
+                                   extract_only=extract_only)
 
-    o.say("\nCommand: " + _q(build("<temp dir>")))
+    windir = env.get("SystemRoot") or env.get("windir") or "C:\\Windows"
+    if single:
+        o.say("\n%d other identical device(s) are connected (%s): the driver is installed on this instance only."
+              % (len(twins), ", ".join(t.instance_id for t in twins)))
+        o.say("Plan:")
+        o.say("  1. " + _q(build("<temp dir>", True)) + "      (signs the package; the certificate is still added)")
+        o.say("  2. " + _q(ops.stage_command("<temp dir>\\fili.inf")) + "      (driver store only, binds nothing)")
+        o.say("  3. DiInstallDevice on " + dev.instance_id + "      (the package, on this device only)")
+    else:
+        o.say("\nCommand: " + _q(build("<temp dir>")))
     gate = _gate(args, admin, o)
     if gate is not None:
         return gate
     if not wdi:
         o.fail("wdi-simple.exe not found: build it (docs/building-wdi-simple.md) or pass --wdi.")
         return EXIT_ERROR
-    code = _execute([build(tempfile.mkdtemp(prefix="usbdrv_"))], run, o)
-    if code != EXIT_OK and o.last_rc in WDI_NEEDS_ADMIN:
-        o.error = None
-        o.say("note: libwdi could not start its installer (exit -15). Retrying once; if the terminal is elevated, "
-              "an antivirus scanning the new file is the likely cause.")
-        code = _execute([build(tempfile.mkdtemp(prefix="usbdrv_"))], run, o)
-        if code != EXIT_OK and o.last_rc in WDI_NEEDS_ADMIN:
-            o.fail("libwdi reports it cannot run its installer with administrative privileges. Check that "
-                   "the terminal is elevated, then retry; if it still fails, allow the temporary installer in "
-                   "your antivirus.")
-    if code != EXIT_OK and o.last_rc in WDI_EXISTS:
-        o.fail("libwdi found no driver to install for this device (WDI_ERROR_EXISTS)."
-               + (" --wcid only works on devices that advertise the WCID compatible ID: try without it." if wcid else ""))
+    if single:
+        code = _install_one(build, dev, wcid, windir, run, o)
+    else:
+        code, _ = _run_wdi(build, wcid, run, o)
     if code != EXIT_OK:
         return code
-    return _post_check(dev, EXPECTED_SERVICE[driver], run, o)
+    # con --filter il driver resta quello originale: libusb0 è solo un filtro superiore, non il servizio del dispositivo
+    return _post_check(dev, None if args.filter_driver else EXPECTED_SERVICE[driver], run, o)
+
+
+def _install_one(build, dev, wcid: bool, windir: str, run, o: Out) -> int:
+    """Installa il driver su UNA istanza: wdi-simple -x prepara e firma il pacchetto, pnputil lo mette nell'archivio
+    driver senza associarlo, DiInstallDevice lo associa a questo solo dispositivo."""
+    code, dest = _run_wdi(lambda d: build(d, True), wcid, run, o)
+    if code != EXIT_OK:
+        return code
+    inf = os.path.join(dest, "fili.inf")
+    stage = ops.stage_command(inf)
+    o.say("running: " + _q(stage))
+    res = run(stage)
+    if res.stdout:
+        o.say(res.stdout.rstrip())
+    published = ops.published_name(res.stdout) if res.returncode == 0 else None
+    if res.returncode != 0 or not published:
+        o.fail("pnputil could not add the package to the driver store (exit %d): %s"
+               % (res.returncode, ((res.stderr or "") + (res.stdout or "")).strip()))
+        return EXIT_DRIVER
+    bind = ops.bind_command(dev, published, windir)
+    o.say("running: DiInstallDevice %s with %s" % (dev.instance_id, published))
+    res = run(bind)
+    if res.stdout:
+        o.say(res.stdout.rstrip())
+    if res.returncode != 0:
+        o.fail("installing %s on %s failed: %s. The package stays in the driver store: remove it with "
+               "'pnputil /delete-driver %s /uninstall'." % (published, dev.instance_id, (res.stderr or "").strip(),
+                                                           published))
+        return EXIT_DRIVER
+    return EXIT_OK
 
 
 def _cmd_restore(args, dev, devs, run, admin, o: Out) -> int:
@@ -621,7 +687,7 @@ def _cmd_restore(args, dev, devs, run, admin, o: Out) -> int:
         if code != EXIT_OK:
             return code
     else:
-        o.fail("the device is still bound to a libwdi package after %d passes. Run 'usbdrv diagnose'."
+        o.fail("the device is still bound to a libwdi package after %d passes. Run 'fili diagnose'."
                % RESTORE_MAX_PASSES)
         return EXIT_DRIVER
     return _post_check(dev, None, run, o)
@@ -630,7 +696,7 @@ def _cmd_restore(args, dev, devs, run, admin, o: Out) -> int:
 def _cmd_extract(args, cfg, dev, o: Out) -> int:
     out_dir = args.out or cfg["driver"]["extract_dir"]
     if not out_dir:
-        raise ValueError("--out DIR is required (or set extract_dir in usbdrv.toml)")
+        raise ValueError("--out DIR is required (or set extract_dir in fili.toml)")
     driver = args.driver or "winusb"
     wcid = cfg["driver"]["wcid"] if args.wcid is None else args.wcid
     path = extract.extract_package(dev, out_dir, driver, name=args.name, wcid=wcid)

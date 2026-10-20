@@ -1,6 +1,6 @@
 """Costruisce un pacchetto di ridistribuzione per un wdi-simple.exe compilato da te, con la documentazione LGPL.
 
-usbdrv in se' non distribuisce wdi-simple.exe. Se VUOI consegnare un binario a qualcun altro, esegui questo
+fili in se' non distribuisce wdi-simple.exe. Se VUOI consegnare un binario a qualcun altro, esegui questo
 script: rifiuta di produrre il pacchetto se il materiale legale non è a posto, e aggiunge
   * i testi LGPL-3.0 e GPL-3.0 (LICENSES/),
   * NOTICE e un THIRD_PARTY/libwdi-SOURCE.txt con la versione esatta, il copyright e un'offerta scritta,
@@ -63,8 +63,8 @@ def source_offer(tag, commit):
         "Written offer: for three years from the date of distribution, whoever distributes this bundle\n"
         "will provide, on request, the complete corresponding source of wdi-simple.exe on a durable medium\n"
         "or by download, at no charge beyond the cost of the medium.\n\n"
-        "usbdrv (the front end that runs wdi-simple.exe as a separate process) is under the MIT License\n"
-        "(LICENSE). usbdrv does not link libwdi.\n"
+        "fili (the front end that runs wdi-simple.exe as a separate process) is under the MIT License\n"
+        "(LICENSE). fili does not link libwdi.\n"
     ) % (tag, commit, REPO, tag, REPO, tag, "libwdi-%s.tar.gz" % tag.lstrip("v"))
 
 

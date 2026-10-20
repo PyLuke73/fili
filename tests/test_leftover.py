@@ -13,9 +13,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "src"))
 
-from test_usbdrv import FakeRun, call  # noqa: E402  (disattiva anche l'esecutore vero)
+from test_fili import FakeRun, call  # noqa: E402  (disattiva anche l'esecutore vero)
 
-from usbdrv import devices, ops  # noqa: E402
+from fili import devices, ops  # noqa: E402
 
 ID = "USB\\VID_0E8D&PID_201C\\SER1"
 

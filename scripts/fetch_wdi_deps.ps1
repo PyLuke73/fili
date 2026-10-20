@@ -3,7 +3,7 @@
 #     writes only into the target directory; it does not install the product)
 #   * libusb-win32 1.4.0.0 binaries and libusbK 3.1.0.0 binaries (the same releases libwdi's own CI uses)
 # Everything goes under -Work (default build\wdi-work, ignored by git). Needs 7-Zip (7z.exe) for the .7z/.zip files.
-# Status: PROVEN on the author's Windows 11 machine (see docs/building-wdi-simple.md). It changes nothing outside -Work.
+# Status: PROVEN on a Windows 11 machine (see docs/building-wdi-simple.md). It changes nothing outside -Work.
 param(
   [string]$Work = (Join-Path $PSScriptRoot '..\build\wdi-work'),
   [string]$SevenZip = 'C:\Program Files\7-Zip\7z.exe'

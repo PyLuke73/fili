@@ -1,7 +1,7 @@
-"""Componenti di terze parti e relative licenze, per 'usbdrv licenses'. Sola lettura: stampa dati, non tocca nulla."""
+"""Componenti di terze parti e relative licenze, per 'fili licenses'. Sola lettura: stampa dati, non tocca nulla."""
 
 COMPONENTS = [
-    {"name": "usbdrv", "license": "MIT", "role": "this program", "redistributed": True},
+    {"name": "fili", "license": "MIT", "role": "this program", "redistributed": True},
     {"name": "libwdi / wdi-simple.exe", "license": "LGPL-3.0-or-later",
      "role": "builds, signs and installs the driver package (run as a separate program)", "redistributed": False},
     {"name": "WinUSB co-installers (Microsoft WDK 8.0)", "license": "Microsoft Windows Driver Frameworks 1.11 terms",
@@ -12,6 +12,6 @@ COMPONENTS = [
     {"name": "usbser", "license": "part of Windows", "role": "CDC driver", "redistributed": False},
 ]
 
-NOTE = ("usbdrv ships none of the third-party components: you fetch and build wdi-simple.exe yourself "
+NOTE = ("fili ships none of the third-party components: you fetch and build wdi-simple.exe yourself "
         "(docs/building-wdi-simple.md). If you redistribute a wdi-simple.exe binary, its obligations apply to you: "
         "see docs/licenza.md, docs/embedded-drivers.txt and NOTICE. Full license texts: LICENSES/. Not legal advice.")

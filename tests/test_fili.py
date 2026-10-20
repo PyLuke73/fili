@@ -1,9 +1,10 @@
-"""Test unitari di usbdrv. NON toccano MAI il sistema: ogni comando esterno passa da un
+"""Test unitari di fili. NON toccano MAI il sistema: ogni comando esterno passa da un
 esecutore finto, e quello vero è sostituito da uno che fa fallire il test se viene mai usato.
 
-Esecuzione:  python -I tests/test_usbdrv.py        (dalla radice del repository)
+Esecuzione:  python -I tests/test_fili.py        (dalla radice del repository)
 """
 
+import base64
 import io
 import json
 import os
@@ -16,7 +17,7 @@ from datetime import datetime
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(ROOT, "src"))
 
-from usbdrv import cli, config, devices, diagnose, extract, logsetup, ops  # noqa: E402
+from fili import cli, config, devices, diagnose, extract, logsetup, ops  # noqa: E402
 
 
 def _forbidden(cmd):  # dai test non si deve mai arrivare all'esecutore vero
@@ -344,6 +345,95 @@ class TestInstall(unittest.TestCase):
             self.assertIn("-t 2", [l for l in out.splitlines() if l.startswith("Command:")][0])
 
 
+class TestIdenticalDevices(unittest.TestCase):
+    """Due dispositivi con lo stesso VID/PID: wdi-simple li cambia entrambi, quindi si installa per singola istanza."""
+    X1 = "USB\VID_AAAA&PID_0002\X1"
+    ARGV = ["install", "--vid", "AAAA", "--pid", "0002", "--driver", "winusb", "--instance", X1]
+
+    def test_siblings(self):
+        devs = devices.parse_device_list(json.dumps(DEVICES))
+        x1 = devices.select_target(devs, 0xAAAA, 0x0002, None, self.X1)
+        self.assertEqual([d.instance_id for d in ops.siblings(x1, devs)], ["USB\VID_AAAA&PID_0002\X2"])
+        single = devices.select_target(devs, 0x1234, 0x0001)
+        self.assertEqual(ops.siblings(single, devs), [])
+
+    def test_dry_run_shows_the_per_instance_plan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code, out, err, run = call(self.ARGV + ["--wdi", fake_wdi(tmp), "--dry-run"])
+        self.assertEqual(code, 0, err)
+        self.assertIn("this instance only", out)
+        self.assertIn(" -x", out)
+        self.assertIn("pnputil /add-driver", out)
+        self.assertIn("DiInstallDevice on " + self.X1, out)
+        self.assertEqual(run.mutating(), [])
+
+    def test_installs_on_one_instance_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            wdi = fake_wdi(tmp)
+            run = FakeRun(fail={"/add-driver": (0, "Published Name:     oem99.inf\n", "")})
+            code, out, err, run = call(self.ARGV + ["--wdi", wdi, "--yes"], run=run, admin=True)
+            self.assertEqual(code, 0, err)
+            calls = run.mutating()
+            self.assertEqual(calls[0][0], wdi)
+            self.assertIn("-x", calls[0])
+            self.assertEqual(calls[1][:2], ["pnputil", "/add-driver"])
+            self.assertNotIn("/install", calls[1])            # solo nell'archivio driver, nessuna associazione
+            self.assertTrue(calls[1][2].endswith("fili.inf"))
+            self.assertEqual(calls[2][:5], ["powershell", "-NoProfile", "-NonInteractive", "-OutputFormat", "Text"])
+            script = base64.b64decode(calls[2][-1]).decode("utf-16-le")
+            self.assertIn("'" + self.X1 + "'", script)
+            self.assertIn("oem99.inf", script)
+            self.assertNotIn("X2", script)
+            self.assertEqual(len(calls), 3)
+
+    def test_stage_failure_stops_before_binding(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = FakeRun(fail={"/add-driver": (1, "", "boom")})
+            code, out, err, run = call(self.ARGV + ["--wdi", fake_wdi(tmp), "--yes"], run=run, admin=True)
+            self.assertEqual(code, 6)
+            self.assertFalse([c for c in run.mutating() if "-EncodedCommand" in c])
+
+    def test_bind_failure_explains_cleanup(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = FakeRun(fail={"/add-driver": (0, "Published Name: oem99.inf", ""), "-EncodedCommand": (1, "", "no driver")})
+            code, out, err, run = call(self.ARGV + ["--wdi", fake_wdi(tmp), "--yes"], run=run, admin=True)
+            self.assertEqual(code, 6)
+            self.assertIn("pnputil /delete-driver oem99.inf", err)
+
+    def test_all_matching_is_the_old_behaviour_and_says_so(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code, out, err, run = call(self.ARGV + ["--all-matching", "--wdi", fake_wdi(tmp), "--dry-run"])
+            self.assertEqual(code, 0, err)
+            self.assertIn("USB\VID_AAAA&PID_0002\X2", out)
+            self.assertIn("will be changed TOO", out)
+            self.assertNotIn(" -x", [l for l in out.splitlines() if l.startswith("Command:")][0])
+
+    def test_filter_needs_all_matching(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            argv = self.ARGV + ["--filter", "--wdi", fake_wdi(tmp), "--dry-run"]
+            code, out, err, run = call(argv)
+            self.assertEqual(code, 2)
+            self.assertIn("--all-matching", err)
+            self.assertEqual(call(argv + ["--all-matching"])[0], 0)
+
+    def test_single_device_keeps_the_direct_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code, out, err, run = call(["install", "--vid", "1234", "--pid", "0001", "--driver", "winusb",
+                                        "--wdi", fake_wdi(tmp), "--dry-run"])
+            self.assertEqual(code, 0)
+            self.assertNotIn("this instance only", out)
+
+    def test_published_name_and_bind_validation(self):
+        self.assertEqual(ops.published_name("Nome pubblicato:    OEM57.inf\n"), "oem57.inf")
+        self.assertIsNone(ops.published_name("nothing here"))
+        devs = devices.parse_device_list(json.dumps(DEVICES))
+        dev = devices.select_target(devs, 0xAAAA, 0x0002, None, self.X1)
+        with self.assertRaises(ValueError):
+            ops.bind_command(dev, "fili.inf", r"C:\Windows")
+        with self.assertRaises(ValueError):
+            ops.bind_command(types.SimpleNamespace(instance_id="X'; calc; '"), "oem1.inf", r"C:\Windows")
+
+
 class TestRestore(unittest.TestCase):
     def test_plan(self):
         devs = devices.parse_device_list(json.dumps(DEVICES))
@@ -410,7 +500,7 @@ class TestRestore(unittest.TestCase):
 
 class TestEncoding(unittest.TestCase):
     """Trovato dalla prima prova di installazione reale (Windows Server 2022, italiano, output rediretto):
-    pnputil stampava testo cp850, usbdrv lo decodificava come UTF-8 con U+FFFD e poi non riusciva a stampare U+FFFD
+    pnputil stampava testo cp850, fili lo decodificava come UTF-8 con U+FFFD e poi non riusciva a stampare U+FFFD
     su uno stdout cp1252 (errore del codec 'charmap'): restore veniva eseguito ma restituiva il codice di uscita 2."""
 
     def test_decode_output_utf8_and_oem(self):
@@ -455,7 +545,7 @@ class TestLicenses(unittest.TestCase):
     def test_json(self):
         code, out, err, run = call(["--json", "licenses"])
         self.assertEqual(code, 0)
-        self.assertEqual(json.loads(out)["data"][0]["name"], "usbdrv")
+        self.assertEqual(json.loads(out)["data"][0]["name"], "fili")
 
 
 class TestHelp(unittest.TestCase):
@@ -471,7 +561,7 @@ class TestHelp(unittest.TestCase):
         for name, sp in subs.items():
             text = sp.format_help()
             self.assertIn("Examples", text, name)
-            self.assertIn("usbdrv", text.split("Examples", 1)[1], name)
+            self.assertIn("fili", text.split("Examples", 1)[1], name)
 
     def test_examples_use_generic_ids_only(self):
         main, subs = self._parsers()
@@ -481,14 +571,14 @@ class TestHelp(unittest.TestCase):
                 self.assertNotIn(forbidden, text.lower(), forbidden)
 
     def test_examples_parse_with_the_real_parser(self):
-        # ogni riga di esempio che inizia con "usbdrv" deve essere accettata dal parser
+        # ogni riga di esempio che inizia con "fili" deve essere accettata dal parser
         import re
         import shlex
         main, subs = self._parsers()
         n = 0
         for text in [main.format_help()] + [sp.format_help() for sp in subs.values()]:
             for line in text.splitlines():
-                m = re.match(r"\s+usbdrv\s+(.*)$", line)
+                m = re.match(r"\s+fili\s+(.*)$", line)
                 if not m or "<" in line or ">" in line or "Run '" in line:
                     continue
                 cmdline = re.split(r"\s{3,}", m.group(1))[0]       # scarta la descrizione finale
@@ -507,8 +597,8 @@ class TestExtract(unittest.TestCase):
             outdir = os.path.join(tmp, "pkg")
             code, out, err, run = call(["extract", "--vid", "0483", "--pid", "374B", "--iface", "0", "--out", outdir], run=run)
             self.assertEqual(code, 0, err)
-            self.assertEqual(os.listdir(outdir), ["usbdrv.inf"])        # niente .cat, niente binari
-            text = read_text(os.path.join(outdir, "usbdrv.inf"))
+            self.assertEqual(os.listdir(outdir), ["fili.inf"])        # niente .cat, niente binari
+            text = read_text(os.path.join(outdir, "fili.inf"))
             self.assertIn("VID_0483&PID_374B&MI_00", text)
             self.assertIn("Include = winusb.inf", text)
             self.assertNotIn("CatalogFile", text)
@@ -517,7 +607,7 @@ class TestExtract(unittest.TestCase):
 
     def test_inf_sections_are_all_used(self):
         # infverif segnala le sezioni non referenziate: genera solo il blocco guid che serve
-        from usbdrv.devices import UsbDevice
+        from fili.devices import UsbDevice
         dev = UsbDevice("USB\VID_1234&PID_0001\X", 0x1234, 1, None, "", "USB", "OK", "T", "", "", "", "", "", 0, None)
         plain = extract.render_inf(dev)
         wcid = extract.render_inf(dev, wcid=True)
@@ -531,7 +621,7 @@ class TestExtract(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             code, *_ = call(["extract", "--vid", "1234", "--pid", "0001", "--out", tmp, "--wcid"])
             self.assertEqual(code, 0)
-            self.assertIn("MS_COMP_WINUSB", read_text(os.path.join(tmp, "usbdrv.inf")))
+            self.assertIn("MS_COMP_WINUSB", read_text(os.path.join(tmp, "fili.inf")))
             code, out, err, run = call(["extract", "--vid", "1234", "--pid", "0001", "--out", tmp, "--driver", "libusbk"])
             self.assertEqual(code, 2)
             code, out, err, run = call(["extract", "--vid", "1234", "--pid", "0001"])
@@ -645,6 +735,7 @@ class TestLogging(unittest.TestCase):
             self.assertEqual(code, 6)
             self.assertRegex(text, r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} ERROR")
             self.assertIn("driver install failed: access denied", text)
+            self.assertIn("installing...", text)                      # anche lo stdout del programma che fallisce
             self.assertIn("exit 5", text)
             self.assertIn("failed (exit 6)", text)
             self.assertNotIn("DEBUG", text)                           # livello predefinito INFO
@@ -661,6 +752,20 @@ class TestLogging(unittest.TestCase):
             self.assertTrue(any("access denied" in r["message"] for r in errors))
             self.assertTrue(any(r.get("stream") == "stderr" and "access denied" in r["message"] for r in errors),
                             "the tool's own stderr must be logged at ERROR level")
+
+    def test_tool_stdout_is_error_only_when_the_command_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code, text = self._run_failing(tmp, "json")
+            lines = [json.loads(l) for l in text.splitlines()]
+            out = [r for r in lines if r.get("stream") == "stdout" and "installing..." in r["message"]]
+            self.assertTrue(out and all(r["level"] == "ERROR" for r in out),
+                            "the stdout of a failing tool must be logged at ERROR level")
+            ok_log = os.path.join(tmp, "ok.log")
+            call(["list", "--log-file", ok_log, "--log-format", "json", "--log-level", "DEBUG"])
+            logsetup.setup_logging("INFO")
+            streams = [json.loads(l) for l in read_text(ok_log).splitlines()]
+            self.assertTrue([r for r in streams if r.get("stream") == "stdout"])
+            self.assertFalse([r for r in streams if r.get("stream") == "stdout" and r["level"] == "ERROR"])
 
     def test_verbose_logs_commands_and_echoes(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -707,7 +812,7 @@ class TestJsonOutput(unittest.TestCase):
 class TestConfig(unittest.TestCase):
     def test_sample_is_valid(self):
         with tempfile.TemporaryDirectory() as tmp:
-            p = os.path.join(tmp, "usbdrv.toml")
+            p = os.path.join(tmp, "fili.toml")
             write_text(p, config.SAMPLE)
             cfg = config.load_config(p, {})
             self.assertEqual(cfg["driver"]["default_driver"], "winusb")
@@ -724,7 +829,7 @@ class TestConfig(unittest.TestCase):
 
     def test_search_order(self):
         with tempfile.TemporaryDirectory() as tmp:
-            write_text(os.path.join(tmp, "usbdrv.toml"), '[device]\nonly_no_driver = true\n')
+            write_text(os.path.join(tmp, "fili.toml"), '[device]\nonly_no_driver = true\n')
             self.assertTrue(config.load_config(None, {}, cwd=tmp)["device"]["only_no_driver"])
             self.assertFalse(config.load_config(None, {}, cwd=os.path.join(tmp, "nope"))["device"]["only_no_driver"])
 

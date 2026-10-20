@@ -28,7 +28,7 @@ filtri USB. La chiavetta è stata restituita al PC senza modifiche (stessa quant
 | P2 | `install --dry-run` su classe HID **senza** `--force` | PASS | rifiutato, codice 2, messaggio chiaro |
 | P3 | `install --dry-run --force` | PASS | mostra piano, avviso e comando; non esegue nulla |
 | P4 | `install --force` **senza** `--yes` | PASS | rifiutato, codice 7 |
-| P5 | `extract` | PASS | scrive solo `usbdrv.inf` non firmato; nessun certificato creato |
+| P5 | `extract` | PASS | scrive solo `fili.inf` non firmato; nessun certificato creato |
 | P6 | `install` WinUSB (vero) | PASS | 70-76 s; driver WinUSB, stato OK; certificato in Root e TrustedPublisher |
 | P6b | `install` libusbK (vero) | PASS | driver `libusbK`, stato OK |
 | P6c | `install` libusb-win32 (vero) | PASS | driver `libusb0`, stato OK |
@@ -45,7 +45,7 @@ mostrava più pacchetti `libwdi`.
 ## 3. Difetti trovati e corretti
 
 1. **Codifica dell'output (`restore` finiva con codice 2).** `pnputil` scrive in italiano con la codepage OEM (cp850).
-   `usbdrv` decodificava l'output come UTF-8 (con sostituzione) e poi non riusciva a stampare il carattere `U+FFFD` su
+   `fili` decodificava l'output come UTF-8 (con sostituzione) e poi non riusciva a stampare il carattere `U+FFFD` su
    uno stdout reindirizzato a cp1252 (`'charmap' codec can't encode …`). Il ripristino veniva eseguito ma il comando
    si interrompeva prima di `pnputil /scan-devices` e restituiva errore. **Correzione:** decodifica UTF-8, in
    alternativa la codepage OEM (`decode_output`); gli stream di uscita sostituiscono i caratteri non codificabili
