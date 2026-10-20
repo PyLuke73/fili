@@ -81,6 +81,11 @@ def apply(argv: List[str], main: Callable = cli.main, **kw) -> Result:
     return call(argv + ["--yes"], main, **kw)
 
 
+def progress_label(done: int, total: int, text: str, seconds: float) -> str:
+    """Riga sopra la barra: 'Step 2 of 4: testo (12 s)'."""
+    return "Step %d of %d: %s (%d s)" % (done, total, text, int(seconds))
+
+
 HELP_TEXT = """\
 fili - what each part of the window does
 
@@ -115,6 +120,11 @@ BUTTONS
   Save output   Saves the text of the lower box (plan, diagnosis, certificates, licenses) to a file.
   Help / About  This text / version, license and credits.
   Ko-fi (cup)   Opens the Ko-fi page to support the project with a donation (optional).
+
+PROGRESS BAR
+  While Install, Reinstall or Restore run, a bar shows "Step 2 of 4", what the step is and the seconds spent in it.
+  The installation of the package (the first step) can take up to a minute with no change of the bar: that is normal,
+  the tool does not report a percentage.
 
 THE TEXT BOX
   Shows the result of the last action, with the exit code. Right-click for Copy / Select all. Scroll bars

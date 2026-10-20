@@ -92,6 +92,8 @@ Without it, `list`, `status`, `diagnose`, `extract` and every `--dry-run` still 
 
 `--config FILE`, `--log-file FILE`, `--log-level DEBUG|INFO|WARN|ERROR`, `--log-format text|json`, `-v/--verbose`,
 `--json` (one JSON document on stdout), `--silent`. They work before or after the sub-command.
+`install`, `reinstall` and `restore` print their progress on stderr as `[2/4] step` (not with `--json` or `--silent`); the GUI
+shows the same steps in a progress bar. The count is of steps, not a percentage: `wdi-simple` does not report one.
 `fili.toml` (see `fili sample-config`) holds defaults; command-line options win, and a config file can never contain
 the confirmation (`--yes`).
 

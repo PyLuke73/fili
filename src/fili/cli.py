@@ -131,6 +131,24 @@ class Out:
         self.data = None
         self.error: Optional[str] = None
         self.last_rc: Optional[int] = None
+        self.progress: Optional[Callable[[int, int, str], None]] = None  # (passo corrente, passi totali, testo)
+        self._done = self._total = 0
+
+    def begin(self, total: int) -> None:
+        """Avvia il contatore di avanzamento: 'total' passi noti prima di cominciare."""
+        self._done, self._total = 0, total
+
+    def extend(self, more: int) -> None:
+        self._total += more
+
+    def advance(self, text: str) -> None:
+        """Annuncia il passo che inizia. Con una funzione 'progress' la chiama (la GUI); altrimenti stampa '[2/4] testo'
+        su stderr, tranne con --json o --silent, così l'output da leggere con uno script resta intatto."""
+        self._done += 1
+        if self.progress:
+            self.progress(self._done, self._total, text)
+        elif not self.json_mode and not self.silent:
+            print("[%d/%d] %s" % (self._done, self._total, text), file=self.err, flush=True)
 
     def say(self, *parts) -> None:
         text = " ".join(str(p) for p in parts)
@@ -358,7 +376,8 @@ def _logged_run(run: Callable, logger: logging.Logger) -> Callable:
 
 def main(argv: Optional[List[str]] = None, *, run: Optional[Callable] = None,
          is_admin: Optional[Callable[[], bool]] = None, env: Optional[dict] = None,
-         out=None, err=None, setupapi_text: Optional[str] = None) -> int:
+         out=None, err=None, setupapi_text: Optional[str] = None,
+         progress: Optional[Callable[[int, int, str], None]] = None) -> int:
     stream = out or sys.stdout
     errs = err or sys.stderr
     _safe_streams(stream, errs)
@@ -369,6 +388,7 @@ def main(argv: Optional[List[str]] = None, *, run: Optional[Callable] = None,
         return EXIT_USAGE if e.code else EXIT_OK
 
     o = Out(stream, errs, args.json, False)
+    o.progress = progress
     try:
         cfg = load_config(args.config, env)
         level = args.log_level or cfg["general"]["log_level"]
@@ -493,8 +513,11 @@ def _gate(args, admin, o: Out) -> Optional[int]:
     return None
 
 
-def _execute(cmds: List[List[str]], run, o: Out) -> int:
+def _execute(cmds: List[List[str]], run, o: Out, steps: bool = False) -> int:
+    """Esegue i comandi in ordine; con steps=True ognuno è un passo del contatore (il chiamante ha fatto begin/extend)."""
     for c in cmds:
+        if steps:
+            o.advance("running %s" % os.path.basename(c[0]))
         o.say("running: " + _q(c))
         res = run(c)
         o.last_rc = res.returncode
@@ -526,6 +549,9 @@ def _post_check(dev: UsbDevice, expected_service: Optional[str], run, o: Out) ->
         o.fail("the device uses '%s', expected '%s'. Run 'fili diagnose'." % (d.service or "-", expected_service))
         return EXIT_DRIVER
     return EXIT_OK
+
+
+WDI_STEP = "installing the driver with wdi-simple (can take up to a minute)"
 
 
 def _run_wdi(build, wcid: bool, run, o: Out):
@@ -605,11 +631,15 @@ def _cmd_install(args, cfg, dev, devs, run, admin, env, o: Out) -> int:
         o.fail("wdi-simple.exe not found: build it (docs/building-wdi-simple.md) or pass --wdi.")
         return EXIT_ERROR
     if single:
+        o.begin(4)
         code = _install_one(build, dev, wcid, windir, run, o)
     else:
+        o.begin(2)
+        o.advance(WDI_STEP)
         code, _ = _run_wdi(build, wcid, run, o)
     if code != EXIT_OK:
         return code
+    o.advance("checking the result")
     # con --filter il driver resta quello originale: libusb0 è solo un filtro superiore, non il servizio del dispositivo
     return _post_check(dev, None if args.filter_driver else EXPECTED_SERVICE[driver], run, o)
 
@@ -617,10 +647,12 @@ def _cmd_install(args, cfg, dev, devs, run, admin, env, o: Out) -> int:
 def _install_one(build, dev, wcid: bool, windir: str, run, o: Out) -> int:
     """Installa il driver su UNA istanza: wdi-simple -x prepara e firma il pacchetto, pnputil lo mette nell'archivio
     driver senza associarlo, DiInstallDevice lo associa a questo solo dispositivo."""
+    o.advance(WDI_STEP + " (prepares and signs the package)")
     code, dest = _run_wdi(lambda d: build(d, True), wcid, run, o)
     if code != EXIT_OK:
         return code
     inf = os.path.join(dest, "fili.inf")
+    o.advance("adding the package to the driver store (pnputil)")
     stage = ops.stage_command(inf)
     o.say("running: " + _q(stage))
     res = run(stage)
@@ -632,6 +664,7 @@ def _install_one(build, dev, wcid: bool, windir: str, run, o: Out) -> int:
                % (res.returncode, ((res.stderr or "") + (res.stdout or "")).strip()))
         return EXIT_DRIVER
     bind = ops.bind_command(dev, published, windir)
+    o.advance("installing the driver on this device only")
     o.say("running: DiInstallDevice %s with %s" % (dev.instance_id, published))
     res = run(bind)
     if res.stdout:
@@ -664,7 +697,8 @@ def _cmd_restore(args, dev, devs, run, admin, o: Out) -> int:
     gate = _gate(args, admin, o)
     if gate is not None:
         return gate
-    code = _execute(cmds, run, o)
+    o.begin(len(cmds) + 1)
+    code = _execute(cmds, run, o, steps=True)
     if code != EXIT_OK:
         return code
     # Dopo un 'reinstall' (o un'installazione ripetuta) il driver store può contenere PIÙ pacchetti libwdi per lo
@@ -683,13 +717,15 @@ def _cmd_restore(args, dev, devs, run, admin, o: Out) -> int:
             return EXIT_DRIVER
         for c in more:
             o.say("  " + _q(c))
-        code = _execute(more, run, o)
+        o.extend(len(more))
+        code = _execute(more, run, o, steps=True)
         if code != EXIT_OK:
             return code
     else:
         o.fail("the device is still bound to a libwdi package after %d passes. Run 'fili diagnose'."
                % RESTORE_MAX_PASSES)
         return EXIT_DRIVER
+    o.advance("checking the result")
     return _post_check(dev, None, run, o)
 
 

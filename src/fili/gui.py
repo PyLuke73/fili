@@ -6,6 +6,7 @@ vera è la CLI con --yes, quindi ogni regola di sicurezza della CLI vale senza m
 
 import sys
 import threading
+import time
 import tkinter as tk
 import webbrowser
 from tkinter import filedialog, messagebox, ttk
@@ -138,8 +139,18 @@ class App(tk.Tk):
             ttk.Button(btn, text=text, command=fn).pack(side="right" if text != "Save output..." else "left",
                                                         padx=(12, 2) if text == "Save output..." else 2)
 
+        # avanzamento di un'installazione/ripristino: passo corrente e tempo trascorso (la percentuale dentro un passo
+        # non esiste: wdi-simple non la comunica)
+        self.prog_frame = ttk.Frame(self, padding=(6, 0))
+        self.prog_text = tk.StringVar()
+        ttk.Label(self.prog_frame, textvariable=self.prog_text).pack(fill="x")
+        self.prog_bar = ttk.Progressbar(self.prog_frame, mode="determinate")
+        self.prog_bar.pack(fill="x", pady=(2, 0))
+        self.prog = None
+
         self.log = make_text(self)
-        scrolled(self, self.log).pack(fill="both", expand=True, padx=6, pady=6)
+        self.log_frame = scrolled(self, self.log)
+        self.log_frame.pack(fill="both", expand=True, padx=6, pady=6)
         self.build_menu()
         self.refresh()
 
@@ -240,6 +251,41 @@ class App(tk.Tk):
         lines += ["", "exit code %d: %s" % (res.code, res.meaning)]
         return "\n".join(lines)
 
+    # -- avanzamento -------------------------------------------------------------------------
+    def progress_start(self) -> None:
+        self.prog = {"done": 0, "total": 1, "text": "starting...", "t0": time.monotonic(), "tick": None}
+        self.prog_bar.configure(maximum=1, value=0)
+        self.prog_frame.pack(fill="x", before=self.log_frame)
+        self.progress_draw()
+
+    def on_progress(self, done: int, total: int, text: str) -> None:
+        """Chiamata dal thread di lavoro: passa al thread dell'interfaccia."""
+        self.after(0, lambda: self.progress_update(done, total, text))
+
+    def progress_update(self, done: int, total: int, text: str) -> None:
+        if self.prog is None:
+            return
+        self.prog.update(done=done, total=total, text=text, t0=time.monotonic())
+        self.prog_bar.configure(maximum=total, value=done - 1)  # il passo in corso non conta come completato
+        self.progress_draw()
+
+    def progress_draw(self) -> None:
+        p = self.prog
+        if p is None:
+            return
+        self.prog_text.set(guicore.progress_label(p["done"], p["total"], p["text"], time.monotonic() - p["t0"]))
+        p["tick"] = self.after(1000, self.progress_draw)
+
+    def progress_stop(self, ok: bool) -> None:
+        p, self.prog = self.prog, None
+        if p is None:
+            return
+        if p["tick"]:
+            self.after_cancel(p["tick"])
+        if ok:
+            self.prog_bar.configure(value=self.prog_bar.cget("maximum"))
+        self.prog_text.set("Done." if ok else "Stopped: see the output below.")
+
     # -- azioni ------------------------------------------------------------------------------
     def refresh(self) -> None:
         def done(res):
@@ -264,6 +310,7 @@ class App(tk.Tk):
                                     all_matching=self.all_matching.get())
 
         def applied(res):
+            self.progress_stop(not isinstance(res, Exception) and res.ok)
             self.write(self.text_of(res))
             self.refresh()
 
@@ -277,7 +324,8 @@ class App(tk.Tk):
                 return
             question = "%s\n\n%s %s (%s)?" % (WARNING, action.capitalize(), dev["vidpid"], dev["name"] or "no name")
             if messagebox.askyesno("Confirm", question, icon="warning"):
-                self.background(lambda: guicore.apply(argv), applied)
+                self.progress_start()
+                self.background(lambda: guicore.apply(argv, progress=self.on_progress), applied)
         self.background(lambda: guicore.preview(argv), previewed)
 
     def diagnose(self) -> None:
