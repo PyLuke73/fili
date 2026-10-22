@@ -194,6 +194,14 @@ class TestStartup(GuiCase):
         self.assertEqual(len(app.tree.get_children()), len(app.devices))
         self.assertFalse([w for w in walk(app) if isinstance(w, ttk.Button) and w.cget("text") == "Restart as Administrator"])
 
+    def test_list_and_log_are_not_hidden_under_their_scroll_frame(self):
+        # Un widget gestito "in_" un frame creato dopo di lui resta sotto il frame: elenco e testi risultano vuoti.
+        app = self.start()
+        for w in (app.tree, app.log):
+            frame = w.grid_info()["in"]
+            order = list(w.master.winfo_children())
+            self.assertGreater(order.index(w), order.index(frame), w)
+
     def test_show_hubs_refreshes_with_the_flag(self):
         app = self.start()
         before = len(app.devices)

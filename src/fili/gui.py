@@ -27,6 +27,7 @@ def scrolled(parent, widget) -> ttk.Frame:
     frame.rowconfigure(0, weight=1)
     frame.columnconfigure(0, weight=1)
     widget.grid(in_=frame, row=0, column=0, sticky="nsew")
+    widget.lift(frame)   # un widget gestito "in_" un frame creato dopo di lui resta sotto il frame, quindi invisibile
     vs = ttk.Scrollbar(frame, orient="vertical", command=widget.yview)
     hs = ttk.Scrollbar(frame, orient="horizontal", command=widget.xview)
     widget.configure(yscrollcommand=vs.set, xscrollcommand=hs.set)
