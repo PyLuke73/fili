@@ -290,11 +290,14 @@ def is_libwdi_package(dev: UsbDevice) -> bool:
     return (dev.provider or "").strip().lower() == "libwdi" or (dev.service or "").lower() in LIBWDI_SERVICES
 
 
-def restore_plan(dev: UsbDevice, all_devices: List[UsbDevice], force: bool = False) -> List[List[str]]:
+def restore_plan(dev: UsbDevice, all_devices: List[UsbDevice], force: bool = False,
+                 all_matching: bool = False) -> List[List[str]]:
     """Comandi per rimuovere il pacchetto driver associato a dev e lasciare che Windows lo rilevi di nuovo.
 
     Solleva ValueError se non è sicuro: pacchetto non OEM, non di un driver libwdi,
-    oppure usato anche da altri dispositivi presenti.
+    oppure usato anche da altri dispositivi presenti. Con all_matching il pacchetto condiviso si rimuove solo
+    se gli altri dispositivi che lo usano sono tutti gemelli di dev (stesso VID/PID/interfaccia): è il caso
+    di 'install --all-matching', che li lega tutti allo stesso pacchetto.
     """
     inf = dev.inf_path
     if not OEM_INF_RE.match(inf or ""):
@@ -308,7 +311,14 @@ def restore_plan(dev: UsbDevice, all_devices: List[UsbDevice], force: bool = Fal
     others = [d.instance_id for d in all_devices
               if d.instance_id != dev.instance_id and d.inf_path.lower() == inf.lower()]
     if others:
-        raise ValueError("package %s is also used by: %s. Refusing to remove it." % (inf, ", ".join(others)))
+        twins = {d.instance_id.lower() for d in siblings(dev, all_devices)}
+        strangers = [i for i in others if i.lower() not in twins]
+        if strangers or not all_matching:
+            hint = ""
+            if not strangers:
+                hint = " They are identical to this one: if 'install --all-matching' put them there, use 'restore --all-matching'."
+            raise ValueError("package %s is also used by: %s. Refusing to remove it.%s"
+                             % (inf, ", ".join(strangers or others), hint))
     return [["pnputil", "/delete-driver", inf, "/uninstall", "/force"],
             ["pnputil", "/scan-devices"]]
 

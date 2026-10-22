@@ -86,6 +86,64 @@ class TestTwinsAllMatching(unittest.TestCase):
             self.assertIn("will be changed TOO", out)
 
 
+class TestTwinsRestoreAllMatching(unittest.TestCase):
+    """Dopo 'install --all-matching' i gemelli condividono un pacchetto: 'restore --all-matching' lo annulla."""
+
+    ARGV = ["restore", "--vid", "AAAA", "--pid", "0002", "--instance", X1]
+
+    @staticmethod
+    def _twins():
+        from fili import devices
+        from test_fili import DEVICES
+        return devices.parse_device_list(__import__("json").dumps(DEVICES)), devices
+
+    def test_plan_refuses_shared_package_without_the_flag_and_hints_at_it(self):
+        from fili import ops
+        devs, devices = self._twins()
+        x1 = devices.select_target(devs, 0xAAAA, 0x0002, None, X1)
+        with self.assertRaises(ValueError) as cm:
+            ops.restore_plan(x1, devs)
+        self.assertIn("restore --all-matching", str(cm.exception))
+
+    def test_plan_with_the_flag_accepts_identical_devices_only(self):
+        import json
+        from fili import ops
+        from test_fili import DEVICES
+        devs, devices = self._twins()
+        x1 = devices.select_target(devs, 0xAAAA, 0x0002, None, X1)
+        plan = ops.restore_plan(x1, devs, all_matching=True)
+        self.assertEqual(plan[0][:3], ["pnputil", "/delete-driver", "oem7.inf"])
+        # un dispositivo DIVERSO sullo stesso pacchetto resta un motivo di rifiuto, anche con il flag
+        stranger = dict(DEVICES[0], InstanceId="USB\\VID_BBBB&PID_0009\\Z1", InfPath="oem7.inf", Service="WinUSB")
+        devs2 = devices.parse_device_list(json.dumps(DEVICES + [stranger]))
+        x1b = devices.select_target(devs2, 0xAAAA, 0x0002, None, X1)
+        with self.assertRaises(ValueError) as cm:
+            ops.restore_plan(x1b, devs2, all_matching=True)
+        self.assertIn("VID_BBBB", str(cm.exception))
+        self.assertNotIn("VID_AAAA&PID_0002\\X2", str(cm.exception))
+
+    def test_cli_refuses_then_succeeds_with_the_flag(self):
+        import json
+        from test_fili import DEVICES
+        code, out, err, run = call(self.ARGV + ["--yes"], admin=True)
+        self.assertEqual(code, 2)
+        self.assertEqual(run.mutating(), [])
+        self.assertIn("--all-matching", err)
+        back = [dict(d, InfPath="usb.inf", Service="vendor_drv", Provider="Vendor")
+                if d["InstanceId"].startswith("USB\\VID_AAAA&PID_0002") else d for d in DEVICES]
+        run = FakeRun(after=back)
+        code, out, err, run = call(self.ARGV + ["--all-matching", "--yes"], run=run, admin=True)
+        self.assertEqual(code, 0, err)
+        self.assertEqual([c[1] for c in run.mutating()], ["/delete-driver", "/scan-devices"])
+        self.assertIn("TOO", out)
+        self.assertIn("USB\\VID_AAAA&PID_0002\\X2", out)
+
+    def test_dry_run_with_the_flag_changes_nothing(self):
+        code, out, err, run = call(self.ARGV + ["--all-matching", "--dry-run"], admin=True)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(run.mutating(), [])
+
+
 class TestTwinsReinstall(unittest.TestCase):
     def test_reinstall_keeps_the_current_driver_on_one_instance(self):
         """reinstall con gemelli: stesso driver di prima (WinUSB, -t 0), ma solo sull'istanza scelta."""

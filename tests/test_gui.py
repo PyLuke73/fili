@@ -49,12 +49,11 @@ class TestGuiCore(unittest.TestCase):
         with self.assertRaises(ValueError):
             guicore.install_args("rm -rf", dev)
 
-    def test_all_matching_is_passed_only_to_install_and_reinstall(self):
+    def test_all_matching_is_passed_to_install_reinstall_and_restore(self):
         dev = find(self.devices(), 0x483, 0x374B, 0)
-        self.assertNotIn("--all-matching", guicore.install_args("install", dev))
-        for action in ("install", "reinstall"):
+        for action in ("install", "reinstall", "restore"):
+            self.assertNotIn("--all-matching", guicore.install_args(action, dev))
             self.assertIn("--all-matching", guicore.install_args(action, dev, all_matching=True))
-        self.assertNotIn("--all-matching", guicore.install_args("restore", dev, all_matching=True))
         self.assertIn("All matching", guicore.HELP_TEXT)
 
     def test_preview_changes_nothing(self):

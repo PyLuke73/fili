@@ -205,3 +205,49 @@ sarebbero fermate al primo peggioramento (mai successo: le segnalazioni erano di
 
 Non provato: installazione interattiva (procedura guidata), Windows 10, ARM64/32 bit, firma del codice (gli `.exe` e l'installer non sono
 firmati: SmartScreen può avvisare).
+
+## 9. Dispositivi identici: batteria completa (22/10/2026)
+
+Due adattatori Ethernet-USB identici (`<adattatore>`, istanze «A» e «B», driver del produttore `oem44.inf`),
+Windows 11 Pro x64, terminale PowerShell con diritti di amministratore, Wi-Fi come rete di riserva. Ogni comando con un
+timeout di 4 minuti; dopo ogni passo si rilegge servizio, pacchetto e codice problema di A e di B. I codici di uscita sono
+quelli scritti da `fili` nel proprio log (`done (exit N)`). Log in `logs/twins_*.log`.
+
+| Prova | Esito |
+|---|---|
+| `install` senza `--instance` (codice 5), senza `--yes` (7), `--filter` senza `--all-matching` (2), `reinstall` su driver del produttore (2), `restore` senza `--instance` (5) | PASS |
+| Dry-run di `install`, `install --all-matching`, `install --filter --all-matching`; `status` | PASS (codice 0, nessuna modifica) |
+| `install --instance` con winusb, libusbK e libusb-win32, su A e su B (6 casi) | PASS: cambia solo il bersaglio, l'altro resta sul driver del produttore |
+| `restore --instance` dopo ciascuno dei 6 casi | PASS: il bersaglio torna a `oem44.inf`, problema 0 |
+| `reinstall --instance` di A su WinUSB | PASS |
+| A su WinUSB e B su libusbK insieme; `restore` di A | PASS: B resta su libusbK |
+| A e B entrambi su WinUSB (due installazioni per istanza); `restore` di A | PASS: B resta su WinUSB, il pacchetto di B non viene toccato |
+| `install --instance A --json` | PASS |
+| `install --instance A --all-matching` (winusb) | PASS: A e B su WinUSB, **stesso pacchetto** |
+| `restore` di A, poi di B, dopo `--all-matching` (prima della correzione) | FAIL (difetto 8): codice 2 su entrambi, corretto sotto |
+| `restore --all-matching` dopo `install --all-matching` (dopo la correzione) | PASS: senza il flag codice 2 con il suggerimento, dry-run che elenca il gemello, con il flag codice 0 e A e B su `oem44.inf` |
+| `cert-remove --thumbprint` del certificato creato dalla prova | PASS |
+
+**Difetto 8 (corretto il 22/10/2026).** Dopo `install --all-matching`, A e B sono legati allo stesso pacchetto (`oem123.inf`).
+`restore` rifiutava di rimuoverlo perché lo usa anche l'altro dispositivo («package oem123.inf is also used by: …. Refusing to
+remove it.»), su entrambi: con `fili` non c'era modo di annullare un `--all-matching`. Correzione: `restore --all-matching`
+(anche `uninstall`, e la casella «All matching» della GUI). Con il flag il pacchetto condiviso si rimuove solo se gli altri
+dispositivi che lo usano sono **tutti gemelli** del bersaglio (stesso VID:PID e interfaccia); un dispositivo diverso sullo stesso
+pacchetto resta un motivo di rifiuto. Senza il flag il rifiuto resta, e il messaggio indica `restore --all-matching` quando gli
+altri sono gemelli. Il piano elenca i gemelli che torneranno al driver originale. Verificato con 4 test nuovi
+(`tests/test_twins.py`, tutti i test: 118 verdi) e sui due adattatori: `install --all-matching`, `restore` senza flag (2, per A
+e per B), dry-run, `restore --all-matching` (0; A e B su `oem44.inf`, problema 0), `cert-remove` del certificato creato (0).
+
+Stato finale: A e B sul driver del produttore (`oem44.inf`, problema 0). I pacchetti libwdi creati dalla prova sono stati rimossi
+dai `restore`; il pacchetto `oem55.inf` del 19/10 (sezione 5) è ancora nell'archivio driver. Un certificato libwdi presente
+all'inizio (`<impronta>`, probabilmente creato dal tentativo di `--filter` del 21/10) non c'era più alla fine: `fili` non lo ha
+rimosso (rimuove solo con `cert-remove --thumbprint`, e ne è stato rimosso uno solo, `<impronta>`); la causa non è stata accertata.
+
+**`--filter --all-matching` sugli adattatori di rete (21/10/2026), terza prova: non riuscito, come le due precedenti.**
+`wdi-simple --filter` mette `libusb0` come filtro superiore solo sull'adattatore A e `fili` non torna più (ucciso dopo 4 minuti);
+l'adattatore B non viene toccato. `restore` toglie `libusb0` dal registro, ma `pnputil /restart-device` si blocca. Il driver di
+rete del produttore non gestisce il riavvio con il filtro; la chiavetta di archiviazione (sezione 7) funziona. **`--filter` non è
+supportato sulle schede di rete.** Se si blocca, `pnputil /restart-device` va terminato e l'adattatore ricollegato.
+
+Non provati: Windows 10, Memory Integrity (HVCI attivo, qui spenta), ARM64 e 32 bit, `--wcid` su un dispositivo che dichiara il
+WCID (nessuno disponibile).

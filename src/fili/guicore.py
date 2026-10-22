@@ -60,8 +60,8 @@ def install_args(action: str, dev: dict, driver: str = "winusb", *, force: bool 
             argv.append("--wcid")
         if filter_driver:
             argv.append("--filter")
-        if all_matching:
-            argv.append("--all-matching")
+    if all_matching and action in ("install", "reinstall", "restore"):
+        argv.append("--all-matching")
     if force:
         argv.append("--force")
     return argv

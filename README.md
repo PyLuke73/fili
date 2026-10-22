@@ -17,7 +17,7 @@
 >   Then on a **physical device** (the built-in webcam, a composite device, Windows 11 Pro): WinUSB, libusbK,
 >   libusb-win32, `usbser`, `--name`, `reinstall`, `restore`, `cert-remove`
 >   ([`docs/risultati-prove-hardware.md`](docs/risultati-prove-hardware.md); three more bugs fixed).
->   **Identical devices** (two identical USB network adapters, same VID:PID): `install --instance` changes only the chosen one (`wdi-simple -x` + `pnputil /add-driver` + `DiInstallDevice`); `--all-matching` keeps the old all-at-once behaviour. Also checked: non-elevated run, composite without `--iface`, protected class, failing `wdi-simple`, `fili.toml`, Secure Boot on. `install --filter` + `restore` on a sacrificial USB flash drive (`USBSTOR` stays the driver, `libusb0` is added as upper filter and removed again; the network adapters are not suitable, see `docs/risultati-prove-hardware.md`). **Not verified:** Windows 10, Memory Integrity, ARM64/32-bit.
+>   **Identical devices** (two identical USB network adapters, same VID:PID): `install --instance` changes only the chosen one (`wdi-simple -x` + `pnputil /add-driver` + `DiInstallDevice`); `--all-matching` keeps the old all-at-once behaviour. Full series on the two identical network adapters (22 Oct 2026): `winusb`, `libusbk` and `libusb-win32` on either one, `reinstall`, `restore`, two different drivers at once, `--json` and `cert-remove` all pass, and the other adapter is never touched. After `install --all-matching` the identical devices share one package, so `restore` refuses it (exit 2) until you add `--all-matching`: `restore --instance ID --all-matching --yes` puts all of them back (checked on the two adapters; details in `docs/risultati-prove-hardware.md` §9). Also checked: non-elevated run, composite without `--iface`, protected class, failing `wdi-simple`, `fili.toml`, Secure Boot on. `install --filter` + `restore` on a sacrificial USB flash drive (`USBSTOR` stays the driver, `libusb0` is added as upper filter and removed again). **`--filter` is not supported on network adapters**: `restore` hangs on the device restart (3 attempts on USB network adapters). **Not verified:** Windows 10, Memory Integrity, `--wcid` on a device that advertises WCID, ARM64/32-bit.
 >   No warranty — MIT License, see [`LICENSE`](LICENSE) and [`docs/licenza.md`](docs/licenza.md).
 
 ## What it is
@@ -54,10 +54,17 @@ libusbK) are in the `LICENSES` and `THIRD_PARTY` folders of the installation. To
 `scripts\build_wdi_simple.sh`, `scripts\build_exe.ps1`, `python -I scripts\package_wdi_bundle.py --exe build\wdi-simple.exe --out dist\wdi-bundle --drivers-file docs\embedded-drivers.txt`,
 then `scripts\build_installer.ps1` (needs PyInstaller and Inno Setup 6).
 
+**Checksums (SHA-256).** The build writes `dist\SHA256SUMS` (installer, `fili.exe`, `fili-gui.exe`, `wdi-simple.exe`): publish it next to
+the files and check a download with `sha256sum -c SHA256SUMS` or `Get-FileHash <file> -Algorithm SHA256`. The installation folder has its own
+`SHA256SUMS` for every installed file (executables, licenses, sources), checked with `sha256sum -c SHA256SUMS` from that folder. The
+checksums detect a corrupted or altered download; they are not a signature of the author (the files are not code-signed).
+
 **Installer (italiano).** `fili-setup-<versione>.exe` installa `fili.exe`, `fili-gui.exe` e `wdi-simple.exe` in
 `C:\Program Files\fili`, con collegamenti nel menu Start e, a scelta, la voce nel PATH. Copia solo file: non cambia driver né
 certificati, e la disinstallazione toglie solo ciò che ha messo. Licenze e sorgenti dei componenti di terzi sono nelle cartelle
-`LICENSES` e `THIRD_PARTY`.
+`LICENSES` e `THIRD_PARTY`. **Hash SHA-256:** la build scrive `dist\SHA256SUMS` (installer, eseguibili, `wdi-simple.exe`) da pubblicare
+accanto ai file; la cartella installata ha un proprio `SHA256SUMS` con tutti i file. Servono a rilevare un download corrotto o alterato,
+non sono una firma dell'autore (i file non sono firmati).
 
 ## Quick start
 
@@ -162,8 +169,9 @@ change the license or give any warranty.
 >   Poi su un **dispositivo fisico** (la webcam integrata, dispositivo composito, Windows 11 Pro): WinUSB, libusbK, libusb-win32,
 >   `usbser`, `--name`, `reinstall`, `restore`, `cert-remove` (`docs/risultati-prove-hardware.md`, altri tre difetti corretti).
 >   **Dispositivi identici** (due adattatori di rete USB identici, con lo stesso VID:PID): `install --instance` cambia solo quello scelto (`wdi-simple -x` + `pnputil /add-driver` + `DiInstallDevice`); `--all-matching` mantiene il vecchio comportamento (tutti insieme). Provati anche: esecuzione senza amministratore, composito senza `--iface`, classe protetta, `wdi-simple` che fallisce, `fili.toml`, Secure Boot attivo.
->   `install --filter` + `restore` su una chiavetta USB sacrificabile (il driver resta `USBSTOR`, `libusb0` si aggiunge come filtro superiore e si toglie; gli adattatori di rete non sono adatti, vedi `docs/risultati-prove-hardware.md`).
->   **Non verificati:** Windows 10, Memory Integrity, ARM64/32 bit. Nessuna garanzia. Licenza: MIT (`LICENSE`, `docs/licenza.md`).
+>   `install --filter` + `restore` su una chiavetta USB sacrificabile (il driver resta `USBSTOR`, `libusb0` si aggiunge come filtro superiore e si toglie). **`--filter` non è supportato sulle schede di rete**: `restore` si blocca al riavvio del dispositivo (3 tentativi su adattatori USB del produttore).
+>   Serie completa sui due adattatori di rete identici (22/10/2026): `winusb`, `libusbk`, `libusb-win32` su ciascuno, `reinstall`, `restore`, due driver diversi insieme, `--json` e `cert-remove` passano, e l'altro adattatore non viene mai toccato. Dopo `install --all-matching` i dispositivi identici condividono un solo pacchetto, quindi `restore` lo rifiuta (codice 2) finché non aggiungi `--all-matching`: `restore --instance ID --all-matching --yes` li ripristina tutti (provato sui due adattatori; dettagli in `docs/risultati-prove-hardware.md` §9).
+>   **Non verificati:** Windows 10, Memory Integrity, `--wcid` su un dispositivo che dichiara il WCID, ARM64/32 bit. Nessuna garanzia. Licenza: MIT (`LICENSE`, `docs/licenza.md`).
 
 **Uso rapido:** `python -m fili list`, `status`, `diagnose` (sola lettura); `install ... --dry-run` mostra cosa farebbe senza
 eseguire nulla; i comandi che modificano il sistema richiedono `--yes` e un terminale di amministratore. `extract` scrive un

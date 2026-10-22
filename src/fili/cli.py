@@ -241,6 +241,7 @@ Examples:
   fili restore --vid 1234 --pid 5678 --dry-run         show what would be removed
   fili restore --vid 1234 --pid 5678 --yes             go back to the original driver
   fili restore --vid 1234 --pid 5678 --iface 1 --yes   one interface only
+  fili restore --vid 1234 --pid 5678 --instance ID --all-matching --yes   undo 'install --all-matching'
 """,
     "extract": """\
 Examples:
@@ -331,6 +332,9 @@ def _build_parser() -> argparse.ArgumentParser:
         s.add_argument("--yes", action="store_true")
         s.add_argument("--dry-run", action="store_true")
         s.add_argument("--force", action="store_true", help="remove even if the service is not WinUSB/libusbK/libusb0")
+        s.add_argument("--all-matching", action="store_true",
+                       help="undo 'install --all-matching': remove a package shared with identical devices "
+                            "(they go back to their original driver too)")
 
     s = add("extract", help="write an UNSIGNED INF for inspection; changes nothing on the system")
     _target(s)
@@ -681,7 +685,7 @@ def _cmd_restore(args, dev, devs, run, admin, o: Out) -> int:
     # 'install --filter' lascia libusb0 come filtro superiore sul driver ORIGINALE: nessun pacchetto OEM da rimuovere
     filt = [f for f in ops.upper_filters(run, dev) if f.lower() == ops.FILTER_SERVICE]
     try:
-        cmds = ops.restore_plan(dev, devs, args.force)
+        cmds = ops.restore_plan(dev, devs, args.force, args.all_matching)
     except ValueError:
         if not filt:
             raise
@@ -691,6 +695,12 @@ def _cmd_restore(args, dev, devs, run, admin, o: Out) -> int:
         cmds = ops.filter_removal_commands(dev, ops.upper_filters(run, dev)) + cmds
     o.say("Target : " + _fmt_dev(dev))
     o.say("Package: " + dev.inf_path)
+    if args.all_matching:
+        shared = [d.instance_id for d in devs if d.instance_id != dev.instance_id
+                  and d.inf_path.lower() == (dev.inf_path or "").lower()]
+        if shared:
+            o.say("--all-matching: %d identical device(s) sharing this package will go back to their original driver TOO: %s"
+                  % (len(shared), ", ".join(shared)))
     o.say("Plan:")
     for c in cmds:
         o.say("  " + _q(c))
@@ -711,7 +721,7 @@ def _cmd_restore(args, dev, devs, run, admin, o: Out) -> int:
         left = now[0]
         o.say("note: the device is now bound to another libwdi package (%s): removing it too." % left.inf_path)
         try:
-            more = ops.restore_plan(left, list_devices(run), args.force)
+            more = ops.restore_plan(left, list_devices(run), args.force, args.all_matching)
         except ValueError as e:
             o.fail(str(e))
             return EXIT_DRIVER
