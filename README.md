@@ -134,7 +134,7 @@ What is implemented, what is not, and what is untested: [`docs/zadig-features.md
 ## Tests
 
 ```powershell
-python -I tests/test_fili.py
+python -I tests/test_fili.py        # also the other files in tests/: test_twins, test_filter, test_gui, test_gui_tk (real window), test_leftover, test_progress, test_bundle
 ```
 The tests never touch the system (a fake command runner; the real one is replaced by a function that fails the test).
 

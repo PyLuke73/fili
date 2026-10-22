@@ -2,6 +2,8 @@
 
 *English summary at the end.*
 
+*Nota sulla riservatezza: i dispositivi di prova sono indicati con etichette generiche (`<webcam>`, `<chiavetta>`, `<telefono>`, `<bootloader>`, `<adattatore>`) e senza numeri di serie, nomi di produttori o impronte di certificati; i VID:PID di esempio (`0483:374B`, `ABCD:1234`) sono generici.*
+
 Seconda serie di prove reali, dopo quelle nella macchina virtuale (`risultati-prove-installazione.md`). Questa volta su
 un **dispositivo fisico**: la webcam integrata del PC di prova. Al termine il sistema è stato riportato allo stato iniziale.
 
