@@ -251,3 +251,17 @@ supportato sulle schede di rete.** Se si blocca, `pnputil /restart-device` va te
 
 Non provati: Windows 10, Memory Integrity (HVCI attivo, qui spenta), ARM64 e 32 bit, `--wcid` su un dispositivo che dichiara il
 WCID (nessuno disponibile).
+
+## 10. Ricostruzione dopo `restore --all-matching` (22/10/2026)
+
+`fili.exe` e `fili-gui.exe` (PyInstaller 6.16) e l'installer (Inno Setup 6) ricostruiti dal commit `029d39a`; `wdi-simple.exe` e il
+bundle non sono cambiati (i `docs` del bundle sono uguali a quelli del repository). `dist\SHA256SUMS` riscritto.
+
+| Prova | Esito |
+|---|---|
+| `fili.exe --version`, `restore --help` mostra `--all-matching` | PASS |
+| Installer silenzioso in una cartella di prova (con i task predefiniti) | PASS: file attesi, `sha256sum -c SHA256SUMS` OK per tutti i 14 file, `fili.exe` installato con `--all-matching` |
+| Il task PATH è attivo di default | la cartella è stata aggiunta al `PATH` di sistema |
+| Disinstallazione silenziosa | PASS: cartella e voce di disinstallazione rimosse, `PATH` identico a prima (tipo `REG_SZ`) |
+
+Non provato in questa ricostruzione: la procedura guidata interattiva, le azioni dalla finestra della GUI, Windows 10.
