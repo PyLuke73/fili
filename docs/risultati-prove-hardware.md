@@ -267,3 +267,24 @@ bundle non sono cambiati (i `docs` del bundle sono uguali a quelli del repositor
 | Disinstallazione silenziosa | PASS: cartella e voce di disinstallazione rimosse, `PATH` identico a prima (tipo `REG_SZ`) |
 
 Non provato in questa ricostruzione: la procedura guidata interattiva, le azioni dalla finestra della GUI, Windows 10.
+
+## 11. `usb-reset` e limiti di tempo dei comandi (22/10/2026)
+
+Due adattatori Ethernet-USB identici (`<adattatore>`, «A» e «B») dietro lo stesso hub esterno, Wi-Fi come rete di riserva.
+Automatico: `tests/test_usbreset.py` (23 test con esecutore finto) e `tests/test_skill.py` (10); tutti i test: 171 verdi.
+
+| Prova | Esito |
+|---|---|
+| `usb-reset --dry-run` e `--dry-run --hub` (sola lettura) | PASS: trova l'hub esterno sopra gli adattatori e i due dispositivi dietro di esso |
+| `usb-reset --instance B --yes` su un adattatore sano | PASS: exit 0 in 57 s, driver originale, problema 0 |
+| `usb-reset --instance B --hub --yes` | PASS: exit 0 in 79 s, entrambi gli adattatori tornano, problema 0 |
+| `install --filter --all-matching` su A | come le tre prove precedenti: `libusb0` messo su A e `wdi-simple` non finisce (fermato dallo script dopo 100 s); su B nulla |
+| `restore` di A dopo il filtro | **exit 6 dopo 206 s** invece di restare appeso oltre 15 minuti: il filtro è tolto dal registro, `pnputil /restart-device` scade dopo 180 s con il suggerimento di usare `usb-reset` |
+| `usb-reset --instance A --yes` sul dispositivo bloccato | **exit 6 dopo 199 s**: anche `pnputil /disable-device` scade |
+| `usb-reset --instance A --hub --yes` | **exit 6 dopo 222 s**: scade anche la disattivazione dell'hub; nessun processo rimasto, hub e adattatori restano `OK` con problema 0 |
+
+**Conclusione.** I limiti di tempo risolvono il problema di `fili` che restava appeso; `usb-reset` risolve i blocchi in cui il
+dispositivo o l'hub rispondono ancora a disattiva/attiva. Quando il driver del produttore è bloccato nel kernel (il caso
+di `--filter` su una scheda di rete) nessun comando di Windows ottiene risposta, né sul dispositivo né sull'hub: serve scollegare e
+ricollegare il dispositivo (o riavviare). Il controller USB non viene mai riavviato da `fili`. Dopo la prova «Ethernet 2» (A) ha
+lo stato di rete vuoto finché non lo si ricollega.

@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import time
 from typing import Callable, List, Optional
 
 from . import __version__, diagnose, extract, licenses, ops
@@ -56,6 +57,10 @@ WDI_NEEDS_ADMIN = (-15, 0xFFFFFFF1)
 # succede su un dispositivo che non dichiara il compatible ID WCID.
 WDI_EXISTS = (-13, 0xFFFFFFF3)
 
+TIMEOUT_HELP = ("note: the command did not finish and was stopped. The device or the USB stack may be stuck. Run\n"
+                "'fili usb-reset' on the same device (add --dry-run to preview); if it keeps failing, unplug and\n"
+                "replug the device.")
+
 ADMIN_HELP = """Administrator rights are required. Open an elevated terminal and run the same command again:
   Start menu -> right-click 'Windows Terminal' or 'PowerShell' -> Run as administrator
   (or press Win+X and choose 'Terminal (Admin)')."""
@@ -84,8 +89,26 @@ def decode_output(data: bytes) -> str:
         return data.decode("latin-1", errors="replace")
 
 
+# Codice di uscita che fili assegna a un comando esterno fermato perché non finiva (nessun programma lo restituisce).
+RC_TIMEOUT = 124
+# Tempo massimo, in secondi, per i programmi che possono restare appesi per sempre quando la pila USB di Windows non
+# risponde ('pnputil /restart-device' è rimasto fermo oltre 15 minuti; 'install --filter' si è fermato in wdi-simple).
+COMMAND_TIMEOUTS = {"pnputil": 180, "wdi-simple": 300}
+
+
 def _default_run(cmd: List[str]):
-    res = subprocess.run(cmd, capture_output=True)
+    return run_command(cmd)
+
+
+def run_command(cmd: List[str]):
+    """Esegue un programma esterno, con il tempo massimo di COMMAND_TIMEOUTS se ce n'è uno per quel programma."""
+    name = os.path.splitext(os.path.basename(cmd[0]))[0].lower() if cmd else ""
+    limit = COMMAND_TIMEOUTS.get(name)
+    try:
+        res = subprocess.run(cmd, capture_output=True, timeout=limit)
+    except subprocess.TimeoutExpired as e:
+        note = ("timed out after %d s and was stopped" % limit).encode()
+        res = subprocess.CompletedProcess(cmd, RC_TIMEOUT, e.stdout or b"", (e.stderr or b"") + note)
     res.stdout = decode_output(res.stdout)
     res.stderr = decode_output(res.stderr)
     return res
@@ -243,6 +266,13 @@ Examples:
   fili restore --vid 1234 --pid 5678 --iface 1 --yes   one interface only
   fili restore --vid 1234 --pid 5678 --instance ID --all-matching --yes   undo 'install --all-matching'
 """,
+    "usb-reset": """\
+Examples:
+  fili usb-reset --vid 1234 --pid 5678 --dry-run            show what would be done (stuck commands, plan)
+  fili usb-reset --vid 1234 --pid 5678 --yes                stop stuck pnputil, disable and enable the device
+  fili usb-reset --vid 1234 --pid 5678 --hub --yes          restart the external hub the device is plugged into
+  (the USB controller and its root hub are never restarted: that would drop keyboard and mouse too)
+""",
     "extract": """\
 Examples:
   fili extract --vid 1234 --pid 5678 --out pkg          write pkg\\fili.inf (unsigned)
@@ -287,6 +317,9 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Replace the driver of a USB device/interface from the command line (Windows).\n"
                     "Read-only commands: list, status, diagnose, extract, sample-config and --dry-run.")
     p.add_argument("--version", action="version", version="fili " + __version__)
+    p.add_argument("--skill", "--skil", action="store_true",
+                   help="print a complete guide for an AI agent that has to drive this tool (rules, workflow, "
+                        "commands, JSON output, exit codes, recovery) and exit; with --json the text is in data.markdown")
     _common(p)
     p.set_defaults(config=None, log_file=None, log_level=None, log_format=None, verbose=False,
                    json=False, silent=None)
@@ -336,6 +369,18 @@ def _build_parser() -> argparse.ArgumentParser:
                        help="undo 'install --all-matching': remove a package shared with identical devices "
                             "(they go back to their original driver too)")
 
+    s = add("usb-reset", help="recover a device (or its hub) that does not respond; needs --yes and Administrator")
+    _target(s)
+    s.add_argument("--hub", action="store_true",
+                   help="restart the external USB hub the device is plugged into instead of the device itself")
+    s.add_argument("--stuck-after", type=int, default=ops.STUCK_AFTER_S, metavar="SECONDS",
+                   help="a pnputil command working on the device for longer than this is stopped (default %d)"
+                        % ops.STUCK_AFTER_S)
+    s.add_argument("--yes", action="store_true")
+    s.add_argument("--dry-run", action="store_true")
+    s.add_argument("--force", action="store_true",
+                   help="allow protected classes, and a hub with keyboards, mice, disks or Bluetooth behind it")
+
     s = add("extract", help="write an UNSIGNED INF for inspection; changes nothing on the system")
     _target(s)
     s.add_argument("--out", help="output directory (default from config)")
@@ -359,6 +404,19 @@ def _build_parser() -> argparse.ArgumentParser:
     add("licenses", help="list third-party components and their licenses (read-only)")
     add("sample-config", help="print a sample fili.toml")
     return p
+
+
+def _print_skill(stream, as_json: bool) -> int:
+    """'fili --skill': la guida per un'AI (vedi skill.py). Non legge né modifica nulla del sistema."""
+    from . import skill
+    text = skill.build(__version__, EXIT_CODES)
+    if as_json:
+        print(json.dumps({"command": "skill", "ok": True, "exit_code": EXIT_OK, "exit_meaning": EXIT_CODES[EXIT_OK],
+                          "error": None, "data": {"markdown": text}, "messages": []}, indent=2, ensure_ascii=False),
+              file=stream)
+    else:
+        print(text, file=stream)
+    return EXIT_OK
 
 
 def _logged_run(run: Callable, logger: logging.Logger) -> Callable:
@@ -385,6 +443,9 @@ def main(argv: Optional[List[str]] = None, *, run: Optional[Callable] = None,
     stream = out or sys.stdout
     errs = err or sys.stderr
     _safe_streams(stream, errs)
+    words = list(sys.argv[1:] if argv is None else argv)
+    if "--skill" in words or "--skil" in words:         # prima di tutto: funziona anche senza sottocomando
+        return _print_skill(stream, "--json" in words)
     env = os.environ if env is None else env
     try:
         args = _build_parser().parse_args(argv)
@@ -497,6 +558,8 @@ def _dispatch(args, cfg, run, admin, env, o: Out, logger, setupapi_text) -> int:
         return _cmd_extract(args, cfg, dev, o)
     if cmd in ("install", "reinstall"):
         return _cmd_install(args, cfg, dev, devs, run, admin, env, o)
+    if cmd == "usb-reset":
+        return _cmd_usb_reset(args, dev, run, admin, o)
     return _cmd_restore(args, dev, devs, run, admin, o)
 
 
@@ -529,6 +592,8 @@ def _execute(cmds: List[List[str]], run, o: Out, steps: bool = False) -> int:
             o.say(res.stdout.rstrip())
         if res.returncode != 0:
             o.fail("command failed (exit %d): %s %s" % (res.returncode, _q(c), (res.stderr or "").strip()))
+            if res.returncode == RC_TIMEOUT:
+                o.say(TIMEOUT_HELP)
             return EXIT_DRIVER
     return EXIT_OK
 
@@ -736,6 +801,79 @@ def _cmd_restore(args, dev, devs, run, admin, o: Out) -> int:
                % RESTORE_MAX_PASSES)
         return EXIT_DRIVER
     o.advance("checking the result")
+    return _post_check(dev, None, run, o)
+
+
+RESET_WAIT = (5, 3)   # (tentativi, secondi tra l'uno e l'altro) per veder tornare il dispositivo dopo il ripristino
+
+
+def _cmd_usb_reset(args, dev, run, admin, o: Out) -> int:
+    """Recupero di un dispositivo (o del suo hub) che non risponde: ferma i pnputil appesi su di lui, poi lo disattiva e
+    lo riattiva. Il controller USB e l'hub radice non si toccano mai."""
+    msg = ops.check_protected(dev)
+    if msg and not args.force:
+        o.fail(msg)
+        return EXIT_USAGE
+    stuck = ops.find_stuck(run, dev)
+    hub = kids = None
+    if args.hub:
+        hub = ops.parent_hub(ops.ancestors(run, dev))
+        if hub is None:
+            o.fail("this device is not behind an external USB hub (it is on a root port), so --hub does not apply. "
+                   "fili never restarts the USB controller or its root hub: that would also drop keyboard and mouse.")
+            return EXIT_USAGE
+        kids = ops.descendants(run, hub["InstanceId"])
+        risky = ops.protected_below(kids)
+        if risky and not args.force:
+            o.fail("restarting the hub %s would also disconnect: %s. Use --force only if you are sure."
+                   % (hub["InstanceId"], ", ".join("%s (%s)" % (k["Name"] or k["InstanceId"], k["Class"]) for k in risky)))
+            return EXIT_USAGE
+    o.say("Target  : " + _fmt_dev(dev))
+    o.say("Instance: " + dev.instance_id)
+    if hub:
+        o.say("Hub     : %s  %s" % (hub["InstanceId"], hub.get("Name") or ""))
+        o.say("Behind it: %d device(s), all of them will be disconnected for a moment: %s" % (
+            len(kids), ", ".join(k["Name"] or k["InstanceId"] for k in kids) or "-"))
+    for p in stuck:
+        old_enough = int(p.get("Seconds", 0)) >= args.stuck_after
+        o.say("pnputil %d has been working on this device for %d s: %s" % (
+            int(p["Pid"]), int(p.get("Seconds", 0)), "stuck, it will be stopped" if old_enough
+            else "younger than --stuck-after %d, left alone" % args.stuck_after))
+    if not stuck:
+        o.say("No pnputil command is working on this device.")
+    cmds = ops.usb_reset_plan(dev, stuck, hub, args.stuck_after)
+    o.data = dict(o.data or {}, stuck=stuck, hub=hub)
+    o.say("Plan:")
+    for c in cmds:
+        o.say("  " + _q(c))
+    gate = _gate(args, admin, o)
+    if gate is not None:
+        return gate
+    o.begin(len(cmds) + 1)
+    rest = []
+    for c in cmds:
+        if c[0] != "taskkill":
+            rest.append(c)
+            continue
+        o.advance("stopping the stuck command")
+        o.say("running: " + _q(c))
+        res = run(c)
+        if res.returncode != 0:      # il processo può essere finito da solo nel frattempo: non è un errore
+            o.say("note: could not stop it (exit %d): %s" % (res.returncode, (res.stderr or res.stdout or "").strip()))
+    code = _execute(rest, run, o, steps=True)
+    if code != EXIT_OK:
+        return code
+    o.advance("waiting for the device to come back")
+    tries, pause = RESET_WAIT
+    for i in range(tries):
+        if [d for d in list_devices(run) if d.instance_id.lower() == dev.instance_id.lower()]:
+            break
+        if i + 1 < tries:
+            time.sleep(pause)
+    else:
+        o.fail("the device is not listed after the reset. Unplug it and plug it in again; if it does not come back, "
+               "try another port or run 'fili diagnose'.")
+        return EXIT_DRIVER
     return _post_check(dev, None, run, o)
 
 

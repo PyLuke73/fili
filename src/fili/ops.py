@@ -345,3 +345,126 @@ def cert_removal_commands(certs: List[Cert], thumbprint: str) -> List[List[str]]
     return [["powershell", "-NoProfile", "-NonInteractive", "-Command",
              CERT_REMOVE_SCRIPT % (c.store, c.thumbprint, c.store, c.thumbprint)]
             for c in hits]
+
+
+# --- usb-reset: recupero di un dispositivo (o del suo hub) che non risponde -------------------------------------------
+#
+# Windows non ha un servizio USB da riavviare: la pila USB è fatta di driver di controller e di hub. Quello che si può
+# fare dal di fuori è fermare i comandi di sistema rimasti appesi su quel dispositivo e disattivare e riattivare il
+# dispositivo (o l'hub a cui è collegato, con --hub). Il controller (e l'hub radice) non si toccano mai: il suo riavvio
+# staccherebbe anche tastiera e mouse USB.
+
+STUCK_AFTER_S = 30      # un pnputil che lavora sul dispositivo da più di tanti secondi è considerato appeso
+HUB_SERVICES = {"usbhub", "usbhub3", "usbhub4"}
+MAX_DEPTH = 3           # quanti livelli sotto un hub si guardano per trovare dispositivi protetti
+
+STUCK_SCRIPT = r"""# fili:stuck
+$ErrorActionPreference = 'SilentlyContinue'
+$id = '%s'
+$rows = @(Get-CimInstance Win32_Process -Filter "Name='pnputil.exe'" | Where-Object {
+    $_.CommandLine -and $_.CommandLine.IndexOf($id, [StringComparison]::OrdinalIgnoreCase) -ge 0 } |
+  ForEach-Object { [pscustomobject]@{ Pid = [int]$_.ProcessId; Command = [string]$_.CommandLine
+                                      Seconds = [int]((Get-Date) - $_.CreationDate).TotalSeconds } })
+ConvertTo-Json -InputObject $rows -Compress
+"""
+
+PARENTS_SCRIPT = r"""# fili:parents
+$ErrorActionPreference = 'SilentlyContinue'
+$cur = '%s'
+$out = @()
+for ($i = 0; $i -lt 6; $i++) {
+  $p = (Get-PnpDeviceProperty -InstanceId $cur -KeyName 'DEVPKEY_Device_Parent').Data
+  if (-not $p) { break }
+  $d = Get-PnpDevice -InstanceId $p
+  $out += [pscustomobject]@{ InstanceId = [string]$p; Class = [string]$d.Class; Name = [string]$d.FriendlyName
+                             Service = [string](Get-PnpDeviceProperty -InstanceId $p -KeyName 'DEVPKEY_Device_Service').Data }
+  $cur = $p
+}
+ConvertTo-Json -InputObject @($out) -Compress
+"""
+
+DESCENDANTS_SCRIPT = r"""# fili:descendants
+$ErrorActionPreference = 'SilentlyContinue'
+$rows = New-Object System.Collections.ArrayList
+function Walk($id, $depth) {
+  if ($depth -gt %d) { return }
+  $kids = (Get-PnpDeviceProperty -InstanceId $id -KeyName 'DEVPKEY_Device_Children').Data
+  foreach ($k in @($kids)) {
+    if (-not $k) { continue }
+    $d = Get-PnpDevice -InstanceId $k -PresentOnly
+    if (-not $d) { continue }
+    [void]$rows.Add([pscustomobject]@{ InstanceId = [string]$k; Class = [string]$d.Class; Name = [string]$d.FriendlyName })
+    Walk $k ($depth + 1)
+  }
+}
+Walk '%s' 1
+ConvertTo-Json -InputObject @($rows) -Compress
+"""
+
+
+def _check_instance_id(instance_id: str) -> str:
+    if not INSTANCE_SAFE_RE.match(instance_id):
+        raise ValueError("unexpected characters in the instance ID: %r" % instance_id)
+    return instance_id
+
+
+def _json_rows(text: str) -> List[dict]:
+    text = (text or "").strip()
+    if not text:
+        return []
+    data = json.loads(text)
+    return [data] if isinstance(data, dict) else [r for r in data if r]
+
+
+def stuck_command(dev: UsbDevice) -> List[str]:
+    return ["powershell", "-NoProfile", "-NonInteractive", "-Command", STUCK_SCRIPT % _check_instance_id(dev.instance_id)]
+
+
+def find_stuck(run: Callable, dev: UsbDevice) -> List[dict]:
+    """Sola lettura: i processi pnputil che hanno questo dispositivo nella riga di comando ({'Pid', 'Command', 'Seconds'})."""
+    res = run(stuck_command(dev))
+    return _json_rows(res.stdout) if res.returncode == 0 else []
+
+
+def ancestors(run: Callable, dev: UsbDevice) -> List[dict]:
+    """Sola lettura: genitore, nonno... del dispositivo, dal più vicino ({'InstanceId', 'Class', 'Name', 'Service'})."""
+    res = run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
+               PARENTS_SCRIPT % _check_instance_id(dev.instance_id)])
+    return _json_rows(res.stdout) if res.returncode == 0 else []
+
+
+def descendants(run: Callable, instance_id: str) -> List[dict]:
+    """Sola lettura: i dispositivi presenti sotto un hub, fino a MAX_DEPTH livelli ({'InstanceId', 'Class', 'Name'})."""
+    res = run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
+               DESCENDANTS_SCRIPT % (MAX_DEPTH, _check_instance_id(instance_id))])
+    return _json_rows(res.stdout) if res.returncode == 0 else []
+
+
+def parent_hub(chain: List[dict]) -> Optional[dict]:
+    """Il primo antenato che è un hub USB esterno. L'hub radice del controller non vale: non si riavvia mai."""
+    for a in chain:
+        iid = a.get("InstanceId", "")
+        if iid.upper().startswith("USB" + chr(92) + "ROOT_HUB"):
+            return None
+        if (a.get("Service") or "").lower() in HUB_SERVICES:
+            return a
+    return None
+
+
+def protected_below(kids: List[dict]) -> List[dict]:
+    """I dispositivi di una classe protetta (tastiera, mouse, dischi, Bluetooth...) tra quelli elencati."""
+    return [k for k in kids if k.get("Class") in PROTECTED_CLASSES]
+
+
+def usb_reset_plan(dev: UsbDevice, stuck: List[dict], hub: Optional[dict] = None,
+                   stuck_after: int = STUCK_AFTER_S) -> List[List[str]]:
+    """Comandi del recupero: ferma i pnputil appesi su questo dispositivo, poi disattiva e riattiva il dispositivo
+    (o il suo hub). I processi più giovani di stuck_after secondi non sono considerati appesi e non si toccano."""
+    cmds = []
+    for p in stuck:
+        if int(p.get("Seconds", 0)) >= stuck_after:
+            cmds.append(["taskkill", "/PID", str(int(p["Pid"])), "/F"])
+    target = _check_instance_id(hub["InstanceId"] if hub else dev.instance_id)
+    cmds.append(["pnputil", "/disable-device", target])
+    cmds.append(["pnputil", "/enable-device", target])
+    return cmds

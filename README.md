@@ -37,6 +37,7 @@ done by **libwdi** (`wdi-simple.exe`), used as a separate program (a subprocess,
 | `install` | **yes** | replaces the driver (WinUSB, libusbK, libusb-win32, CDC) of one device/interface |
 | `reinstall` | **yes** | puts back the driver currently bound |
 | `restore` / `uninstall` | **yes** | removes the OEM driver package of one device and lets Windows re-detect it |
+| `usb-reset` | **yes** | recovers a device (or its external hub) that does not respond: stops stuck `pnputil` commands, disables and enables it; never touches the USB controller |
 | `cert-remove` | **yes** (only with `--thumbprint`) | lists / removes the self-signed certificates created by libwdi |
 | `licenses` | no | third-party components and their licenses |
 | `sample-config` | no | prints a sample `fili.toml` |
@@ -104,6 +105,23 @@ shows the same steps in a progress bar. The count is of steps, not a percentage:
 `fili.toml` (see `fili sample-config`) holds defaults; command-line options win, and a config file can never contain
 the confirmation (`--yes`).
 
+## For AI agents: `fili --skill`
+
+`fili --skill` (alias `--skil`) prints a complete guide for an AI agent that has to drive fili on behalf of a person, and exits 0 without reading or changing anything. With `--json` the text is in `data.markdown`. It works with no sub-command and in any position (`fili list --skill`). The guide covers:
+
+* the **rules**: look before touching, never add `--yes` or `--force` without the person's explicit approval of that exact command, Administrator, the self-signed certificate, only devices the person owns;
+* the **workflow** `list` → `status` → `--dry-run` → ask → `--yes` → check the exit code and the `after` data → how to undo;
+* how to **select** a device (`--vid/--pid`, `--iface` for composite devices, `--instance` for identical ones, `--all-matching`);
+* every **command**, whether it changes the system, and the `--json` output format;
+* the **exit codes** and what to do for each, and the **recovery** paths (`restore`, `usb-reset`, unplug and replug, `cert-remove`);
+* the known **limits** (for example `--filter` on network adapters).
+
+The exit codes and the version come from the program itself; a test checks that every command and every option named in the guide exists, so it cannot fall behind the CLI.
+
+## USB that stops responding: `fili usb-reset`
+
+Windows has no USB service to restart: the stack is made of controller and hub drivers. When a device or `pnputil` hangs (`pnputil /restart-device` stayed stuck for over 15 minutes on a USB network adapter), `fili usb-reset --vid V --pid P [--instance ID] --dry-run` shows what it would do and `--yes` does it: it stops `pnputil` commands working on that device for longer than `--stuck-after` seconds (default 30), then disables and enables the device. `--hub` restarts the external hub it is plugged into instead (everything behind that hub disconnects for a moment; refused if a keyboard, mouse, disk or Bluetooth adapter is behind it, unless `--force`). The USB controller and its root hub are **never** restarted: that would also drop keyboard and mouse. `pnputil` commands have a time limit of 180 s and `wdi-simple` of 300 s: a command that does not finish is stopped, fili exits with 6 and points to `usb-reset`. **Limit:** if the vendor driver of the device is hung inside the kernel (seen with `--filter` on a USB network adapter), `pnputil /disable-device` times out too, on the device and on its hub; then only unplugging and replugging the device (or a reboot) helps.
+
 ## Exit codes
 
 | Code | Meaning |
@@ -134,7 +152,7 @@ What is implemented, what is not, and what is untested: [`docs/zadig-features.md
 ## Tests
 
 ```powershell
-python -I tests/test_fili.py        # also the other files in tests/: test_twins, test_filter, test_gui, test_gui_tk (real window), test_leftover, test_progress, test_bundle
+python -I tests/test_fili.py        # also the other files in tests/: test_twins, test_filter, test_gui, test_gui_tk (real window), test_leftover, test_progress, test_bundle, test_usbreset, test_skill
 ```
 The tests never touch the system (a fake command runner; the real one is replaced by a function that fails the test).
 
@@ -184,7 +202,11 @@ INF non firmato per ispezione e **non crea certificati**. `install` richiede `wd
 **Log e diagnosi:** `--log-file` (testo o JSON), `-v`, `--log-level`; `diagnose` spiega i codici di errore di Windows
 (es. 10, 28, 43, 52), l'NTSTATUS, il driver corrente e le righe di `setupapi.dev.log` relative al dispositivo.
 
-**Test:** `python -I tests/test_fili.py` e `python -I tests/test_bundle.py` (non toccano il sistema).
+**Per gli agenti AI:** `fili --skill` (alias `--skil`) stampa una guida completa per un'AI che deve usare fili al posto di una persona (regole, flusso di lavoro, selezione del dispositivo, comandi, formato `--json`, codici di uscita, recupero, limiti) ed esce con 0 senza toccare nulla. Con `--json` il testo è in `data.markdown`. La guida è in inglese; i codici di uscita e la versione vengono dal programma e un test controlla che ogni comando e ogni opzione citata esistano.
+
+**USB che non risponde:** `fili usb-reset --vid V --pid P [--instance ID] --dry-run` mostra cosa farebbe; con `--yes` ferma i `pnputil` appesi su quel dispositivo (più vecchi di `--stuck-after`, 30 s) e poi lo disattiva e riattiva. `--hub` riavvia invece l'hub esterno a cui è collegato (rifiutato se dietro c'è una tastiera, un mouse, un disco o un Bluetooth, salvo `--force`). Il controller USB e l'hub radice non si riavviano mai. I comandi `pnputil` hanno un limite di 180 s e `wdi-simple` di 300 s: se non finiscono vengono fermati, `fili` esce con 6 e indica `usb-reset`. **Limite:** se il driver del produttore è bloccato nel kernel (visto con `--filter` su un adattatore di rete USB) scade anche `pnputil /disable-device`, sul dispositivo e sul suo hub; allora serve scollegare e ricollegare il dispositivo (o riavviare).
+
+**Test:** `python -I tests/test_fili.py` e gli altri file in `tests\` (non toccano il sistema).
 
 **Supporta il progetto:** fili è software libero. Se ti è stato utile puoi sostenerlo con una donazione su
 **[Ko-fi](https://ko-fi.com/lucacolombo35186)** (nella GUI c'è anche il pulsante ☕). La donazione è facoltativa e non
