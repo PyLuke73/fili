@@ -149,7 +149,7 @@ def about_text() -> str:
     lines = ["fili %s" % __version__,
              "Replace the driver of a USB device or interface (Windows), from the command line or this window.",
              "",
-             "Copyright (c) 2026 PyLuke73. Released under the MIT License (see LICENSE).",
+             "Copyright (c) 2026 PyLuke73. Released under the GNU GPL v3 or later (see LICENSE).",
              "Free software: if it is useful to you, you can support it with a donation on Ko-fi: " + KOFI_URL,
              "",
              "Credits and third-party components",

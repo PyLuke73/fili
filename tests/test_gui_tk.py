@@ -404,7 +404,7 @@ class TestReadOnlyButtons(GuiCase):
         self.assertEqual(len(wins), 2)
         texts = [w.winfo_children() and "".join(t.get("1.0", "end") for t in walk(w) if isinstance(t, tk.Text)) for w in wins]
         self.assertTrue(any("DEVICE LIST" in t for t in texts))
-        self.assertTrue(any("MIT License" in t for t in texts))
+        self.assertTrue(any("GPL" in t for t in texts))
         self.press("☕ Ko-fi")
         self.assertEqual(self.opened, [guicore.KOFI_URL])
 

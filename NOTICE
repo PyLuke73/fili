@@ -33,4 +33,4 @@ Driver binaries that libwdi may embed when YOU build it (not in this repository)
 Run 'fili licenses' to print this list. Before distributing a binary, list only the drivers it really
 contains (docs/embedded-drivers.txt) and follow docs/licenza.md section 4.
 
-fili itself: MIT License, Copyright (c) 2026 PyLuke73 (see LICENSE and docs/licenza.md).
+fili itself: GNU GPL v3 or later, Copyright (c) 2026 PyLuke73 (see LICENSE and docs/licenza.md).

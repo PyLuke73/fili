@@ -1,14 +1,14 @@
 # Licenza / License
 
-> **Stato: licenza scelta dal titolare: MIT** (Copyright (c) 2026 PyLuke73), testo in `LICENSE`. Scelta compatibile
-> con l'architettura attuale: nessun codice di Zadig (GPL) copiato, libwdi (LGPL) usata solo come programma esterno.
-> `INF_TEMPLATE` è stato riscritto dalla documentazione Microsoft (vedi §1). Gli obblighi LGPL per un eventuale
-> binario di `wdi-simple.exe` sono coperti da `scripts/package_wdi_bundle.py` (vedi §4). Questo documento non è un parere legale.
+> **Stato: licenza scelta dal titolare: GPL-3.0-or-later** (Copyright (c) 2026 PyLuke73), testo in `LICENSE`.
+> Fino al commit `04a8f9b` il progetto era pubblicato con licenza MIT: chi ha scaricato quelle versioni le conserva con
+> i termini MIT; da questa modifica in poi il codice è GPL. Compatibile con le dipendenze: libwdi (LGPL-3.0-or-later) è
+> usata come programma esterno, libusb-win32 (GPL) e libusbK (BSD) sono driver ridistribuiti con le loro licenze.
+> Questo documento non è un parere legale.
 >
-> *English summary:* the project is licensed under the **MIT License** (`LICENSE`). Valid as long as no GPL code from
-> Zadig is copied and libwdi (LGPL) stays a separate program. `INF_TEMPLATE` was rewritten from Microsoft's documentation
-> (see section 1). LGPL duties for a redistributed `wdi-simple.exe` are handled by `scripts/package_wdi_bundle.py`
-> (section 4). The text below lists the options considered, the dependency obligations, and a release checklist. Not legal advice.
+> *English summary:* the project is licensed under the **GNU GPL v3 or later** (`LICENSE`). Releases up to commit `04a8f9b`
+> were published under the MIT License and stay available under it for whoever obtained them. The text below lists the
+> options considered, the dependency obligations, and a release checklist. Not legal advice.
 
 ## 1. Fatti verificati nel repository di libwdi (tag v1.5.1, commit `9b23b82`)
 
@@ -132,7 +132,7 @@ driver** (libwdi accetta anche solo `--with-libusbk`) e togliere dall'elenco gli
 
 ## 5. Checklist "cosa devo fare al rilascio"
 
-- [x] Licenza MIT scelta: `LICENSE` e `license` in `pyproject.toml` fatti.
+- [x] Licenza GPL-3.0-or-later scelta (passaggio da MIT): `LICENSE` e `license` in `pyproject.toml` fatti.
 - [ ] Controllare che il titolare del copyright («PyLuke73») sia quello voluto (nome reale o handle).
 - [ ] Verificare che nessun file contenga codice copiato da Zadig/libwdi (ricerca di commenti `Pete Batard`, `libwdi`, `LGPL`, `GPL`).
 - [x] `INF_TEMPLATE` riscritto dalla documentazione Microsoft (§1); da validare con `infverif` e con la prova di installazione.

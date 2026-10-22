@@ -63,7 +63,7 @@ def source_offer(tag, commit):
         "Written offer: for three years from the date of distribution, whoever distributes this bundle\n"
         "will provide, on request, the complete corresponding source of wdi-simple.exe on a durable medium\n"
         "or by download, at no charge beyond the cost of the medium.\n\n"
-        "fili (the front end that runs wdi-simple.exe as a separate process) is under the MIT License\n"
+        "fili (the front end that runs wdi-simple.exe as a separate process) is under the GNU GPL v3 or later\n"
         "(LICENSE). fili does not link libwdi.\n"
     ) % (tag, commit, REPO, tag, REPO, tag, "libwdi-%s.tar.gz" % tag.lstrip("v"))
 

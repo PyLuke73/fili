@@ -310,7 +310,7 @@ Delphi di Inno Setup non sono visibili a UI Automation) e screenshot della sola 
 
 | Prova | Esito |
 |---|---|
-| Pagine: lingua → contratto di licenza (MIT, «Avanti» disabilitato finché non si accetta) → informazioni → cartella → processi aggiuntivi → riepilogo → «Installazione completata» | PASS |
+| Pagine: lingua → contratto di licenza (GPL-3.0-or-later, «Avanti» disabilitato finché non si accetta) → informazioni → cartella → processi aggiuntivi → riepilogo → «Installazione completata» | PASS |
 | Pulsante «Indietro» dalla pagina della cartella (torna alla pagina precedente, poi si prosegue) | PASS |
 | Processi aggiuntivi: **la voce nel PATH è selezionata di default**, l'icona sul desktop no; «Esegui fili» a fine installazione è disattivato | PASS (README corretto: il PATH è proposto, non facoltativo di default) |
 | Dopo l'installazione: 20 file, `sha256sum -c SHA256SUMS` OK per i 17 file elencati, collegamenti nel menu Start, voce in «App installate» (versione ed editore corretti), cartella nel `PATH` di sistema | PASS |

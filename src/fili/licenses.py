@@ -1,7 +1,7 @@
 """Componenti di terze parti e relative licenze, per 'fili licenses'. Sola lettura: stampa dati, non tocca nulla."""
 
 COMPONENTS = [
-    {"name": "fili", "license": "MIT", "role": "this program", "redistributed": True},
+    {"name": "fili", "license": "GPL-3.0-or-later", "role": "this program", "redistributed": True},
     {"name": "libwdi / wdi-simple.exe", "license": "LGPL-3.0-or-later",
      "role": "builds, signs and installs the driver package (run as a separate program)", "redistributed": False},
     {"name": "WinUSB (winusb.sys)", "license": "part of Windows",

@@ -104,7 +104,7 @@ class TestGuiCore(unittest.TestCase):
     def test_about_has_version_license_and_credits(self):
         from fili import __version__
         text = guicore.about_text()
-        for part in (__version__, "MIT", "Zadig", "libwdi", "libusbK", "libusb-win32", "Not legal advice"):
+        for part in (__version__, "GPL", "Zadig", "libwdi", "libusbK", "libusb-win32", "Not legal advice"):
             self.assertIn(part, text)
 
     def test_non_json_output_is_reported(self):

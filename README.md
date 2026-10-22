@@ -18,7 +18,7 @@
 >   libusb-win32, `usbser`, `--name`, `reinstall`, `restore`, `cert-remove`
 >   ([`docs/risultati-prove-hardware.md`](docs/risultati-prove-hardware.md); three more bugs fixed).
 >   **Identical devices** (two identical USB network adapters, same VID:PID): `install --instance` changes only the chosen one (`wdi-simple -x` + `pnputil /add-driver` + `DiInstallDevice`); `--all-matching` keeps the old all-at-once behaviour. Full series on the two identical network adapters (22 Oct 2026): `winusb`, `libusbk` and `libusb-win32` on either one, `reinstall`, `restore`, two different drivers at once, `--json` and `cert-remove` all pass, and the other adapter is never touched. After `install --all-matching` the identical devices share one package, so `restore` refuses it (exit 2) until you add `--all-matching`: `restore --instance ID --all-matching --yes` puts all of them back (checked on the two adapters; details in `docs/risultati-prove-hardware.md` §9). Also checked: non-elevated run, composite without `--iface`, protected class, failing `wdi-simple`, `fili.toml`, Secure Boot on. `install --filter` + `restore` on a sacrificial USB flash drive (`USBSTOR` stays the driver, `libusb0` is added as upper filter and removed again). **`--filter` is not supported on network adapters**: `restore` hangs on the device restart (3 attempts on USB network adapters). **Not verified:** Windows 10, Memory Integrity, `--wcid` on a device that advertises WCID, ARM64/32-bit.
->   No warranty — MIT License, see [`LICENSE`](LICENSE) and [`docs/licenza.md`](docs/licenza.md).
+>   No warranty — GNU GPL v3 or later, see [`LICENSE`](LICENSE) and [`docs/licenza.md`](docs/licenza.md).
 
 ## What it is
 
@@ -158,7 +158,7 @@ The tests never touch the system (a fake command runner; the real one is replace
 
 ## Contributing, license
 
-[`CONTRIBUTING.md`](CONTRIBUTING.md) · license **MIT** ([`LICENSE`](LICENSE), [`docs/licenza.md`](docs/licenza.md)) · dependencies: [`NOTICE`](NOTICE).
+[`CONTRIBUTING.md`](CONTRIBUTING.md) · license **GPL-3.0-or-later** ([`LICENSE`](LICENSE), [`docs/licenza.md`](docs/licenza.md)) · dependencies: [`NOTICE`](NOTICE).
 Clean-room note: Zadig's source (GPL-3.0-or-later) was not copied or adapted; libwdi/wdi-simple (LGPL-3.0-or-later) is only
 run as an external program.
 
@@ -189,7 +189,7 @@ change the license or give any warranty.
 >   **Dispositivi identici** (due adattatori di rete USB identici, con lo stesso VID:PID): `install --instance` cambia solo quello scelto (`wdi-simple -x` + `pnputil /add-driver` + `DiInstallDevice`); `--all-matching` mantiene il vecchio comportamento (tutti insieme). Provati anche: esecuzione senza amministratore, composito senza `--iface`, classe protetta, `wdi-simple` che fallisce, `fili.toml`, Secure Boot attivo.
 >   `install --filter` + `restore` su una chiavetta USB sacrificabile (il driver resta `USBSTOR`, `libusb0` si aggiunge come filtro superiore e si toglie). **`--filter` non è supportato sulle schede di rete**: `restore` si blocca al riavvio del dispositivo (3 tentativi su adattatori USB del produttore).
 >   Serie completa sui due adattatori di rete identici (22/10/2026): `winusb`, `libusbk`, `libusb-win32` su ciascuno, `reinstall`, `restore`, due driver diversi insieme, `--json` e `cert-remove` passano, e l'altro adattatore non viene mai toccato. Dopo `install --all-matching` i dispositivi identici condividono un solo pacchetto, quindi `restore` lo rifiuta (codice 2) finché non aggiungi `--all-matching`: `restore --instance ID --all-matching --yes` li ripristina tutti (provato sui due adattatori; dettagli in `docs/risultati-prove-hardware.md` §9).
->   **Non verificati:** Windows 10, Memory Integrity, `--wcid` su un dispositivo che dichiara il WCID, ARM64/32 bit. Nessuna garanzia. Licenza: MIT (`LICENSE`, `docs/licenza.md`).
+>   **Non verificati:** Windows 10, Memory Integrity, `--wcid` su un dispositivo che dichiara il WCID, ARM64/32 bit. Nessuna garanzia. Licenza: GPL-3.0-or-later (`LICENSE`, `docs/licenza.md`).
 
 **Uso rapido:** `python -m fili list`, `status`, `diagnose` (sola lettura); `install ... --dry-run` mostra cosa farebbe senza
 eseguire nulla; i comandi che modificano il sistema richiedono `--yes` e un terminale di amministratore. `extract` scrive un
