@@ -48,7 +48,7 @@ Every command that changes the system needs `--yes`, needs Administrator rights,
 ## Installer (no build needed)
 
 `dist\installer\fili-setup-<version>.exe` installs `fili.exe` (command line), `fili-gui.exe` (graphical interface) and
-`wdi-simple.exe` in `C:\Program Files\fili`, with Start-menu shortcuts and an optional PATH entry. The installer **only
+`wdi-simple.exe` in `C:\Program Files\fili`, with Start-menu shortcuts and a PATH entry (offered, selected by default, you can untick it). The installer **only
 copies files**: it changes no driver and adds no certificate, and the uninstaller removes only what it installed
 (including its PATH entry). Licenses and corresponding sources of the bundled third-party components (libwdi, libusb-win32,
 libusbK) are in the `LICENSES` and `THIRD_PARTY` folders of the installation. To build it yourself:
@@ -61,7 +61,7 @@ the files and check a download with `sha256sum -c SHA256SUMS` or `Get-FileHash <
 checksums detect a corrupted or altered download; they are not a signature of the author (the files are not code-signed).
 
 **Installer (italiano).** `fili-setup-<versione>.exe` installa `fili.exe`, `fili-gui.exe` e `wdi-simple.exe` in
-`C:\Program Files\fili`, con collegamenti nel menu Start e, a scelta, la voce nel PATH. Copia solo file: non cambia driver né
+`C:\Program Files\fili`, con collegamenti nel menu Start e la voce nel PATH (proposta, selezionata di default, si può togliere). Copia solo file: non cambia driver né
 certificati, e la disinstallazione toglie solo ciò che ha messo. Licenze e sorgenti dei componenti di terzi sono nelle cartelle
 `LICENSES` e `THIRD_PARTY`. **Hash SHA-256:** la build scrive `dist\SHA256SUMS` (installer, eseguibili, `wdi-simple.exe`) da pubblicare
 accanto ai file; la cartella installata ha un proprio `SHA256SUMS` con tutti i file. Servono a rilevare un download corrotto o alterato,

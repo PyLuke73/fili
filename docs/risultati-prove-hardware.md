@@ -302,3 +302,36 @@ lo stato di rete vuoto finché non lo si ricollega.
 | Disinstallazione silenziosa | PASS: voce di disinstallazione rimossa, `PATH` identico a prima. Nota sulla prova: `fili-gui.exe` (PyInstaller onefile) lancia un processo figlio; se si chiude solo il processo padre il figlio tiene bloccato il file e la cartella resta: chiudere la finestra prima di disinstallare |
 
 Non provato in questa ricostruzione: la procedura guidata interattiva dell'installer, Windows 10, Memory Integrity.
+
+## 13. Procedura guidata dell'installer e azioni dalla finestra della GUI (22/10/2026)
+
+**Procedura guidata (interattiva, Windows 11 Pro, lingua italiana).** Pilotata dall'esterno con i messaggi Win32 (i controlli
+Delphi di Inno Setup non sono visibili a UI Automation) e screenshot della sola finestra (`PrintWindow`).
+
+| Prova | Esito |
+|---|---|
+| Pagine: lingua → contratto di licenza (MIT, «Avanti» disabilitato finché non si accetta) → informazioni → cartella → processi aggiuntivi → riepilogo → «Installazione completata» | PASS |
+| Pulsante «Indietro» dalla pagina della cartella (torna alla pagina precedente, poi si prosegue) | PASS |
+| Processi aggiuntivi: **la voce nel PATH è selezionata di default**, l'icona sul desktop no; «Esegui fili» a fine installazione è disattivato | PASS (README corretto: il PATH è proposto, non facoltativo di default) |
+| Dopo l'installazione: 20 file, `sha256sum -c SHA256SUMS` OK per i 17 file elencati, collegamenti nel menu Start, voce in «App installate» (versione ed editore corretti), cartella nel `PATH` di sistema | PASS |
+| Nessun driver e nessun certificato toccati (elenco dei pacchetti driver e dei certificati identico a prima) | PASS |
+| Reinstallazione sopra la stessa versione | PASS: una sola voce nel `PATH`, 4 collegamenti, 1 voce in «App installate» |
+| Disinstallazione interattiva («Vuoi rimuovere completamente fili…?» → Sì → «Disinstallazione completata») | PASS: cartella rimossa, `PATH` identico a prima, menu Start e voce in «App installate» rimossi, certificati invariati |
+
+L'installer scrive nel registro solo la propria voce di disinstallazione (`HKLM\...\Uninstall\{AppId}_is1`, quella che compare in
+«App installate») e, con il task PATH, il valore `Path` di `HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment` (stesso tipo
+di valore di prima). Al termine della disinstallazione non resta nessuna chiave `fili` né `PyLuke73` in `HKLM` o `HKCU`.
+
+**Azioni dalla finestra della GUI su un dispositivo vero.** App vera con l'esecutore vero, pulsanti premuti con `invoke` (stesso percorso
+del clic) e conferme risposte da codice; finestra nascosta. Dispositivo: telefono Android già su WinUSB (`<telefono>`).
+
+| Prova | Esito |
+|---|---|
+| Avvio, elenco di 14 righe, selezione del dispositivo, driver `libusbk` | PASS |
+| Install: anteprima, finestra di conferma (una sola), barra «Step 1 of 2: installing the driver with wdi-simple» | PASS |
+| Install: esito | **non riuscito per colpa del dispositivo**: `wdi-simple` risponde «Operation timed out» (exit 4294967289); la GUI mostra l'errore e la barra dice «Stopped: see the output below.»; il dispositivo resta intatto. Lo stesso comando da riga di comando resta fermo in `wdi-simple` come nella GUI (fermato dopo 300 s). Certificati creati dai tentativi rimossi con `cert-remove` |
+| Restore dopo l'Install fallito | PASS (comportamento corretto): codice 2, «not an OEM package (inf='winusb.inf'): nothing to remove» |
+
+**Non provato:** un Install e un Restore dalla finestra che finiscano bene su un dispositivo vero (il telefono non ha risposto al cambio di
+driver in questa sessione, gli adattatori di rete sono noti per bloccarsi, la chiavetta non era collegata); il clic con il mouse sui widget
+(Tk non espone i controlli: la finestra è stata comandata con `invoke`, come nei 20 test di `tests/test_gui_tk.py`); Windows 10; Memory Integrity.
