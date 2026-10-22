@@ -13,7 +13,7 @@ import webbrowser
 from tkinter import filedialog, messagebox, ttk
 from typing import Callable, List, Optional
 
-from . import __version__, guicore
+from . import __version__, guicore, iconpack
 
 DRIVERS = ("winusb", "libusbk", "libusb-win32", "usbser")
 COLUMNS = (("vidpid", "VID:PID", 90), ("mi", "Iface", 55), ("cls", "Class", 90), ("service", "Driver", 90),
@@ -169,15 +169,18 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("fili %s" % __version__)
-        self.geometry("920x560")
+        self.geometry("1020x600")
+        self.minsize(960, 480)
+        self.images = {name: tk.PhotoImage(master=self, data=data) for name, data in iconpack.UI.items()}
+        self.iconphoto(True, *[tk.PhotoImage(master=self, data=d) for _, d in sorted(iconpack.APP.items())])
         self.devices: List[dict] = []
         self.busy = False
 
         top = ttk.Frame(self, padding=6)
         top.pack(fill="x")
         self.hubs = tk.BooleanVar(value=False)
-        ttk.Button(top, text="☕ Ko-fi", width=9, command=self.donate).pack(side="right", padx=(8, 0))
-        ttk.Button(top, text="Refresh", command=self.refresh).pack(side="right")
+        self.icon_button(top, "Ko-fi", "support", self.donate).pack(side="right", padx=(8, 0))
+        self.icon_button(top, "Refresh", "refresh", self.refresh).pack(side="right")
         ttk.Checkbutton(top, text="Show hubs", variable=self.hubs, command=self.refresh).pack(side="right", padx=8)
         if not guicore.is_admin():
             ttk.Label(top, text="Not elevated: you can look, but changes need Administrator.",
@@ -211,16 +214,17 @@ class App(tk.Tk):
         btn.pack(fill="x")
         self.buttons = []
         for text, action in (("Install", "install"), ("Reinstall", "reinstall"), ("Restore", "restore")):
-            b = ttk.Button(btn, text=text, command=lambda a=action: self.act(a))
+            b = self.icon_button(btn, text, action, lambda a=action: self.act(a))
             b.pack(side="left", padx=2)
             self.buttons.append(b)
         for text, fn in (("Diagnose", self.diagnose), ("Certificates", self.certs), ("Licenses", self.licenses)):
-            b = ttk.Button(btn, text=text, command=fn)
+            b = self.icon_button(btn, text, text.lower(), fn)
             b.pack(side="left", padx=(12 if text == "Diagnose" else 2, 2))
             self.buttons.append(b)
-        for text, fn in (("Save output...", self.save_output), ("Help", self.help), ("About", self.about)):
-            ttk.Button(btn, text=text, command=fn).pack(side="right" if text != "Save output..." else "left",
-                                                        padx=(12, 2) if text == "Save output..." else 2)
+        for text, icon, fn in (("Save output...", "save", self.save_output), ("Help", "help", self.help),
+                               ("About", "about", self.about)):
+            self.icon_button(btn, text, icon, fn).pack(side="right" if text != "Save output..." else "left",
+                                                       padx=(12, 2) if text == "Save output..." else 2)
 
         # avanzamento di un'installazione/ripristino: passo corrente e tempo trascorso (la percentuale dentro un passo
         # non esiste: wdi-simple non la comunica)
@@ -291,6 +295,13 @@ class App(tk.Tk):
             copy_to_clipboard(self, "\t".join(values + [self.devices[int(sel[0])]["instance_id"]]))
 
     # -- funzioni di supporto ----------------------------------------------------------------
+    def icon_button(self, parent, text: str, icon: str, command: Callable) -> ttk.Button:
+        """Pulsante con l'icona del set a sinistra del testo (senza icona se il nome non c'e')."""
+        img = self.images.get(icon)
+        if img is None:
+            return ttk.Button(parent, text=text, command=command)
+        return ttk.Button(parent, text=text, image=img, compound="left", command=command)
+
     def write(self, text: str) -> None:
         self.log.configure(state="normal")
         self.log.delete("1.0", "end")

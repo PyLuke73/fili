@@ -202,6 +202,14 @@ class TestStartup(GuiCase):
             order = list(w.master.winfo_children())
             self.assertGreater(order.index(w), order.index(frame), w)
 
+    def test_buttons_carry_the_icons_of_the_set(self):
+        app = self.start()
+        for text in ("Install", "Reinstall", "Restore", "Diagnose", "Certificates", "Licenses", "Save output...", "Help",
+                     "About", "Refresh", "Ko-fi"):
+            b = self.widget(ttk.Button, text)
+            self.assertTrue(str(b.cget("image")), text)
+        self.assertEqual(len(app.images), 18)
+
     def test_show_hubs_refreshes_with_the_flag(self):
         app = self.start()
         before = len(app.devices)
@@ -413,7 +421,7 @@ class TestReadOnlyButtons(GuiCase):
         texts = [w.winfo_children() and "".join(t.get("1.0", "end") for t in walk(w) if isinstance(t, tk.Text)) for w in wins]
         self.assertTrue(any("DEVICE LIST" in t for t in texts))
         self.assertTrue(any("GPL" in t for t in texts))
-        self.press("☕ Ko-fi")
+        self.press("Ko-fi")
         self.assertEqual(self.opened, [guicore.KOFI_URL])
 
     def test_menu_has_save_exit_help(self):

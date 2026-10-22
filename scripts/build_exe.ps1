@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 $common = @('--noconfirm', '--clean', '--onefile', '--paths', 'src', '--distpath', 'dist', '--workpath', 'build\pyinstaller',
-            '--specpath', 'build\pyinstaller')
+            '--specpath', 'build\pyinstaller', '--icon', (Join-Path $root 'assets\icons\fili.ico'))
 python -m PyInstaller @common --console --name fili packaging\fili_cli.py
 python -m PyInstaller @common --windowed --name fili-gui packaging\fili_gui.py
 Get-ChildItem dist\fili.exe, dist\fili-gui.exe | Get-FileHash -Algorithm SHA256 | ForEach-Object { "{0}  {1}" -f $_.Hash.ToLower(), (Split-Path $_.Path -Leaf) }
