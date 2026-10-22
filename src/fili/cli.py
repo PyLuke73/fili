@@ -105,7 +105,9 @@ def run_command(cmd: List[str]):
     name = os.path.splitext(os.path.basename(cmd[0]))[0].lower() if cmd else ""
     limit = COMMAND_TIMEOUTS.get(name)
     try:
-        res = subprocess.run(cmd, capture_output=True, timeout=limit)
+        # CREATE_NO_WINDOW: senza, nell'exe a finestre (fili-gui) ogni PowerShell/pnputil apre una console vuota
+        res = subprocess.run(cmd, capture_output=True, timeout=limit,
+                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     except subprocess.TimeoutExpired as e:
         note = ("timed out after %d s and was stopped" % limit).encode()
         res = subprocess.CompletedProcess(cmd, RC_TIMEOUT, e.stdout or b"", (e.stderr or b"") + note)
