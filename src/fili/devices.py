@@ -18,10 +18,22 @@ $ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $keys = 'DEVPKEY_Device_ProblemStatus','DEVPKEY_Device_Service','DEVPKEY_Device_DriverInfPath',
         'DEVPKEY_Device_DriverVersion','DEVPKEY_Device_DriverDate','DEVPKEY_Device_DriverProvider'
-$rows = @(Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -like 'USB\*' } | ForEach-Object {
+$devs = @(Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -like 'USB\*' })
+# una sola interrogazione per tutte le proprietà: una per dispositivo costava ~1 s ciascuna (19 s contro 2 s)
+$byId = @{}
+if ($devs.Count) {
+  foreach ($x in (Get-PnpDeviceProperty -InstanceId @($devs | ForEach-Object { $_.InstanceId }) -KeyName $keys)) {
+    if (-not $byId.ContainsKey($x.InstanceId)) { $byId[$x.InstanceId] = @{} }
+    $byId[$x.InstanceId][$x.KeyName] = $x.Data
+  }
+}
+$rows = @($devs | ForEach-Object {
   $id = $_.InstanceId
-  $p = @{}
-  foreach ($x in (Get-PnpDeviceProperty -InstanceId $id -KeyName $keys)) { $p[$x.KeyName] = $x.Data }
+  $p = $byId[$id]
+  if (-not $p) {   # la richiesta cumulativa a volte salta un dispositivo: lo interroga da solo
+    $p = @{}
+    foreach ($x in (Get-PnpDeviceProperty -InstanceId $id -KeyName $keys)) { $p[$x.KeyName] = $x.Data }
+  }
   $dd = $p['DEVPKEY_Device_DriverDate']
   [pscustomobject]@{
     InstanceId    = $id
