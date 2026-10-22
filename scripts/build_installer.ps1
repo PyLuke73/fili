@@ -1,7 +1,7 @@
 # Costruisce l'installer dist\installer\fili-setup-<versione>.exe con Inno Setup 6.
 # Prerequisiti (nell'ordine): scripts\build_wdi_simple.sh (build\wdi-simple.exe), scripts\build_exe.ps1 (dist\fili*.exe),
 # scripts\package_wdi_bundle.py (dist\wdi-bundle). Questo script aggiunge il sorgente di libusb-win32 (libusb0.sys è GPL),
-# poi compila l'installer. Non installa nulla e non tocca driver o certificati.
+# poi compila l'installer e scrive dist\SHA256SUMS. Non installa nulla e non tocca driver o certificati.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
@@ -30,14 +30,28 @@ SHA-256: $sha
 Licence texts: LICENSES\GPL-3.0.txt, LICENSES\LGPL-3.0.txt.
 "@ | Set-Content 'dist\wdi-bundle\THIRD_PARTY\libusb-win32-SOURCE.txt' -Encoding utf8
 
-# SHA256SUMS del bundle: aggiunge i due file di libusb-win32 (togliendo prima eventuali righe di un'esecuzione precedente)
+# SHA256SUMS del bundle (finisce in {app}): aggiunge i file di libusb-win32 e quelli che l'installer copia da fuori dal
+# bundle (fili.exe, fili-gui.exe, README.md, INSTALLER_NOTICE.txt), con i nomi che avranno nella cartella installata.
+# Prima toglie le righe di un'esecuzione precedente. Verifica dopo l'installazione: sha256sum -c SHA256SUMS
 $sums = 'dist\wdi-bundle\SHA256SUMS'
-$keep = Get-Content $sums | Where-Object { $_ -notmatch 'libusb-win32' }
-$new = 'THIRD_PARTY\libusb-win32-release_1.4.0.0-source.zip', 'THIRD_PARTY\libusb-win32-SOURCE.txt' | ForEach-Object {
-    "{0}  {1}" -f (Get-FileHash "dist\wdi-bundle\$_" -Algorithm SHA256).Hash.ToLower(), $_.Replace('\', '/') }
+$extra = [ordered]@{
+    'THIRD_PARTY/libusb-win32-release_1.4.0.0-source.zip' = 'dist\wdi-bundle\THIRD_PARTY\libusb-win32-release_1.4.0.0-source.zip'
+    'THIRD_PARTY/libusb-win32-SOURCE.txt'                 = 'dist\wdi-bundle\THIRD_PARTY\libusb-win32-SOURCE.txt'
+    'fili.exe'                                            = 'dist\fili.exe'
+    'fili-gui.exe'                                        = 'dist\fili-gui.exe'
+    'README.md'                                           = 'README.md'
+    'INSTALLER_NOTICE.txt'                                = 'packaging\INSTALLER_NOTICE.txt'
+}
+$keep = Get-Content $sums | Where-Object { -not $extra.Contains(($_ -split '  ', 2)[1]) }
+$new = $extra.GetEnumerator() | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.Value -Algorithm SHA256).Hash.ToLower(), $_.Key }
 [IO.File]::WriteAllText((Join-Path $root $sums), ((@($keep) + $new) -join "`n") + "`n")
 
 $version = (Select-String -Path 'src\fili\__init__.py' -Pattern '__version__\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
 & $iscc "/DAppVersion=$version" packaging\fili.iss
 if ($LASTEXITCODE -ne 0) { throw "ISCC ha restituito $LASTEXITCODE" }
-Get-ChildItem dist\installer\*.exe | Get-FileHash -Algorithm SHA256 | ForEach-Object { "{0}  {1}" -f $_.Hash.ToLower(), (Split-Path $_.Path -Leaf) }
+
+# SHA256SUMS da pubblicare accanto ai file: installer, eseguibili e wdi-simple.exe (formato di 'sha256sum -c', percorsi relativi a dist\)
+$release = @("installer\fili-setup-$version.exe", 'fili.exe', 'fili-gui.exe', 'wdi-bundle\wdi-simple.exe')
+$lines = $release | ForEach-Object { "{0}  {1}" -f (Get-FileHash "dist\$_" -Algorithm SHA256).Hash.ToLower(), $_.Replace('\', '/') }
+[IO.File]::WriteAllText((Join-Path $root 'dist\SHA256SUMS'), ($lines -join "`n") + "`n")
+$lines
