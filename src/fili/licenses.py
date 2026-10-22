@@ -13,6 +13,6 @@ COMPONENTS = [
     {"name": "usbser", "license": "part of Windows", "role": "CDC driver", "redistributed": False},
 ]
 
-NOTE = ("fili ships none of the third-party components: you fetch and build wdi-simple.exe yourself "
-        "(docs/building-wdi-simple.md). If you redistribute a wdi-simple.exe binary, its obligations apply to you: "
-        "see docs/licenza.md, docs/embedded-drivers.txt and NOTICE. Full license texts: LICENSES/. Not legal advice.")
+NOTE = ("The installer ships wdi-simple.exe (libwdi) with the drivers it embeds; their licence texts and corresponding "
+        "sources are in the LICENSES and THIRD_PARTY folders next to the program. If you redistribute that binary, its "
+        "obligations apply to you: see docs/licenza.md, docs/embedded-drivers.txt and NOTICE. Not legal advice.")

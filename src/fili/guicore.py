@@ -161,6 +161,20 @@ def about_text() -> str:
     return "\n".join(lines)
 
 
+def licenses_text(width: int = 96) -> str:
+    """Componenti di terze parti e licenze, a blocchi leggibili (la tabella della riga di comando ha righe lunghissime)."""
+    import textwrap
+    from . import licenses
+    out = ["Third-party components and licenses", ""]
+    for c in licenses.COMPONENTS:
+        out.append(c["name"])
+        out.append("    License: %s" % c["license"])
+        out += textwrap.wrap(c["role"], width, initial_indent="    ", subsequent_indent="    ")
+        out.append("")
+    out += textwrap.wrap(licenses.NOTE, width)
+    return chr(10).join(out)
+
+
 def is_admin() -> bool:
     return cli._default_is_admin()
 

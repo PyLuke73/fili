@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 import tkinter as tk
+import tkinter.font as tkfont
 import webbrowser
 from tkinter import filedialog, messagebox, ttk
 from typing import Callable, List, Optional
@@ -21,7 +22,7 @@ WARNING = ("This replaces the driver of the selected device and adds a self-sign
            "trusted stores (remove it later with 'fili cert-remove'). Use only on devices you own.")
 
 
-def scrolled(parent, widget) -> ttk.Frame:
+def scrolled(parent, widget, horizontal: bool = True) -> ttk.Frame:
     """Mette un Text/Treeview in un frame con barre di scorrimento verticale e orizzontale; il frame va posizionato da chi chiama."""
     frame = ttk.Frame(parent)
     frame.rowconfigure(0, weight=1)
@@ -29,10 +30,12 @@ def scrolled(parent, widget) -> ttk.Frame:
     widget.grid(in_=frame, row=0, column=0, sticky="nsew")
     widget.lift(frame)   # un widget gestito "in_" un frame creato dopo di lui resta sotto il frame, quindi invisibile
     vs = ttk.Scrollbar(frame, orient="vertical", command=widget.yview)
-    hs = ttk.Scrollbar(frame, orient="horizontal", command=widget.xview)
-    widget.configure(yscrollcommand=vs.set, xscrollcommand=hs.set)
+    widget.configure(yscrollcommand=vs.set)
     vs.grid(row=0, column=1, sticky="ns")
-    hs.grid(row=1, column=0, sticky="ew")
+    if horizontal:
+        hs = ttk.Scrollbar(frame, orient="horizontal", command=widget.xview)
+        widget.configure(xscrollcommand=hs.set)
+        hs.grid(row=1, column=0, sticky="ew")
     return frame
 
 
@@ -43,7 +46,7 @@ def copy_to_clipboard(widget, text: str) -> None:
 
 def make_text(parent, height: int = 12, wrap: str = "none") -> tk.Text:
     """Un Text in sola lettura con menu contestuale (Copia la selezione / Seleziona tutto)."""
-    text = tk.Text(parent, height=height, wrap=wrap, state="disabled")
+    text = tk.Text(parent, height=height, wrap=wrap, state="disabled", font=("Consolas", 10))
     menu = tk.Menu(text, tearoff=False)
 
     def selection() -> str:
@@ -72,15 +75,94 @@ def make_text(parent, height: int = 12, wrap: str = "none") -> tk.Text:
     return text
 
 
+TEAL, INK = "#0B6F7A", "#1B2A41"
+TERM_SECTIONS = ("OPTIONS", "BUTTONS")     # sezioni di guida fatte di "termine   descrizione" su due colonne
+
+
+def parse_document(content: str, term_sections=TERM_SECTIONS) -> List[tuple]:
+    """Trasforma il testo semplice di guida/informazioni in blocchi (tipo, termine, testo): title, head, item, bullet, para.
+
+    La prima riga e' il titolo; una riga senza rientro e' un titolo di sezione se e' tutta maiuscola o se la
+    segue una riga rientrata; nelle sezioni 'a termini' la colonna 2-16 e' il termine; le righe di continuazione
+    (rientro maggiore, o a capo dentro lo stesso paragrafo) si uniscono al blocco precedente."""
+    lines = content.split(chr(10))
+    blocks: List[list] = []
+    section, blank_before, first = "", True, True
+    for n, raw in enumerate(lines):
+        if not raw.strip():
+            blank_before = True
+            continue
+        indent = len(raw) - len(raw.lstrip(" "))
+        body = raw.strip()
+        if first:
+            blocks.append(["title", "", body])
+            first, blank_before = False, False
+            continue
+        nxt = next((l for l in lines[n + 1:] if l.strip()), "")
+        if indent == 0:
+            if body.isupper() or nxt.startswith("  "):
+                section = body
+                blocks.append(["head", "", body])
+            else:
+                blocks.append(["para", "", body])
+            blank_before = False
+            continue
+        starter = None
+        if body.startswith(("* ", "- ")):
+            starter = ["bullet", "", body[2:]]
+        elif indent == 2 and section in term_sections and len(raw) > 16 and raw[15] == " " and raw[16] != " " and raw[2:16].strip():
+            starter = ["item", raw[2:16].strip(), raw[16:].strip()]
+        last = blocks[-1] if blocks else None
+        joins = (last is not None and last[0] in ("item", "bullet", "para") and not blank_before
+                 and (indent > 2 or last[0] == "para"))
+        if starter and not (joins and indent > 2):
+            blocks.append(starter)
+        elif joins:
+            last[2] += " " + body
+        else:
+            blocks.append(["para", "", body])
+        blank_before = False
+    return [tuple(b) for b in blocks]
+
+
+def render_document(text: tk.Text, content: str) -> None:
+    """Disegna il testo di guida con titoli, colonne a rientro sospeso e elenchi, nei caratteri di sistema."""
+    base = tkfont.nametofont("TkDefaultFont").copy()
+    base.configure(size=10)
+    bold, head, title = base.copy(), base.copy(), base.copy()
+    bold.configure(weight="bold")
+    head.configure(weight="bold", size=11)
+    title.configure(weight="bold", size=17)
+    text._fonts = (base, bold, head, title)        # i Font vanno tenuti vivi finche' esiste il widget
+    text.configure(font=base, background="#FFFFFF", foreground=INK, padx=20, pady=16, spacing1=2, spacing3=3,
+                   wrap="word", selectbackground="#BFE9ED", selectforeground=INK, relief="flat")
+    text.tag_configure("title", font=title, spacing3=10)
+    text.tag_configure("head", font=head, foreground=TEAL, spacing1=18, spacing3=5)
+    text.tag_configure("para", lmargin1=2, lmargin2=2, spacing1=4)
+    text.tag_configure("item", lmargin1=2, lmargin2=150, tabs=("150",), spacing1=4)
+    text.tag_configure("term", font=bold)
+    text.tag_configure("bullet", lmargin1=2, lmargin2=20, tabs=("20",), spacing1=4)
+    text.configure(state="normal")
+    text.delete("1.0", "end")
+    for kind, term, body in parse_document(content):
+        if kind == "item":
+            text.insert("end", term, ("item", "term"))
+            text.insert("end", chr(9) + body + chr(10), ("item",))
+        elif kind == "bullet":
+            text.insert("end", chr(0x2022) + chr(9) + body + chr(10), ("bullet",))
+        else:
+            text.insert("end", body + chr(10), (kind,))
+    text.configure(state="disabled")
+
+
 def show_text_window(parent, title: str, content: str, width: int = 100, height: int = 30) -> None:
     win = tk.Toplevel(parent)
     win.title(title)
+    win.geometry("800x640")
     text = make_text(win, height, wrap="word")
-    text.configure(width=width, state="normal")
-    text.insert("end", content)
-    text.configure(state="disabled")
-    ttk.Button(win, text="Close", command=win.destroy).pack(side="bottom", pady=6)
-    scrolled(win, text).pack(fill="both", expand=True, padx=6, pady=6)
+    render_document(text, content)
+    ttk.Button(win, text="Close", command=win.destroy).pack(side="bottom", pady=8)
+    scrolled(win, text, horizontal=False).pack(fill="both", expand=True, padx=8, pady=(8, 0))
 
 
 class App(tk.Tk):
@@ -339,7 +421,7 @@ class App(tk.Tk):
             self.text_of(r) + "\n\nTo remove one: fili cert-remove --thumbprint <hash> --yes"))
 
     def licenses(self) -> None:
-        self.background(lambda: guicore.call(["licenses"]), lambda r: self.write(self.text_of(r)))
+        self.write(guicore.licenses_text())
 
     def elevate(self) -> None:
         if guicore.relaunch_elevated():
