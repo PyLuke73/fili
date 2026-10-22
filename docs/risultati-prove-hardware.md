@@ -288,3 +288,17 @@ dispositivo o l'hub rispondono ancora a disattiva/attiva. Quando il driver del p
 di `--filter` su una scheda di rete) nessun comando di Windows ottiene risposta, né sul dispositivo né sull'hub: serve scollegare e
 ricollegare il dispositivo (o riavviare). Il controller USB non viene mai riavviato da `fili`. Dopo la prova «Ethernet 2» (A) ha
 lo stato di rete vuoto finché non lo si ricollega.
+
+## 12. Ricostruzione con `usb-reset`, limiti di tempo e `--skill` (22/10/2026)
+
+`fili.exe`, `fili-gui.exe` (PyInstaller 6.16) e l'installer (Inno Setup 6) ricostruiti dal commit che contiene `usb-reset`;
+`wdi-simple.exe` e il bundle non sono cambiati. `dist\SHA256SUMS` riscritto (installer, `fili.exe`, `fili-gui.exe`, `wdi-simple.exe`).
+
+| Prova | Esito |
+|---|---|
+| `fili.exe --version`, `--skill` (anche con `--json`), `usb-reset --help`, `list --json` | PASS |
+| Installer silenzioso in una cartella di prova | PASS: `sha256sum -c SHA256SUMS` OK per tutti i 17 file; `fili.exe` installato con `--skill` |
+| `fili-gui.exe` installato | PASS: parte e resta in esecuzione |
+| Disinstallazione silenziosa | PASS: voce di disinstallazione rimossa, `PATH` identico a prima. Nota sulla prova: `fili-gui.exe` (PyInstaller onefile) lancia un processo figlio; se si chiude solo il processo padre il figlio tiene bloccato il file e la cartella resta: chiudere la finestra prima di disinstallare |
+
+Non provato in questa ricostruzione: la procedura guidata interattiva dell'installer, Windows 10, Memory Integrity.
