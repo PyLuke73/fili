@@ -9,7 +9,7 @@ della pagina) con la risposta pronta. **Il repository deve essere pubblico prima
 | Repository URL* | `https://github.com/PyLuke73/fili` |
 | Homepage URL* | `https://github.com/PyLuke73/fili` (la pagina del repository va bene; meglio non usare l'indirizzo della singola release) |
 | Download URL | `https://github.com/PyLuke73/fili/releases` (la pagina deve dire che il progetto usa SignPath Foundation: vedi sotto) |
-| Privacy Policy URL | `https://github.com/PyLuke73/fili#code-signing-policy` (sezione "Code signing policy" del README, con la nota sulla privacy) |
+| Privacy Policy URL | `https://github.com/PyLuke73/fili/blob/main/PRIVACY.md` (il modulo rifiuta gli indirizzi con `#`; la politica di firma è nella sezione "Code signing policy" del README) |
 | Wikipedia URL | lasciare vuoto |
 | Tagline* | `Replace the driver of a USB device on Windows, from the command line or a small window.` |
 | Category* | scegliere dall'elenco la voce più vicina a "system utilities" / "drivers / hardware tools" |
