@@ -1,42 +1,48 @@
 # Richiesta di firma gratuita a SignPath Foundation
 
-Da compilare su https://signpath.org/apply (il modulo si vede solo nel browser: i campi qui sotto sono le risposte pronte,
-da adattare alle domande). Le condizioni del programma sono su https://signpath.org/terms.
+Modulo: https://signpath.org/apply (condizioni: https://signpath.org/terms). Sotto, i campi del modulo (come risultano dal PDF
+della pagina) con la risposta pronta. **Il repository deve essere pubblico prima dell'invio.** I campi con `*` sono obbligatori.
 
-## Risposte pronte (in inglese, per il modulo)
+| Campo | Risposta |
+|---|---|
+| Project Name* | `fili` (Una ricerca su Google deve identificare il progetto: cercare "fili USB driver" dopo la pubblicazione e, se serve, usare "fili USB driver replacement"). |
+| Repository URL* | `https://github.com/PyLuke73/fili` |
+| Homepage URL* | `https://github.com/PyLuke73/fili` (la pagina del repository va bene; meglio non usare l'indirizzo della singola release) |
+| Download URL | `https://github.com/PyLuke73/fili/releases` (la pagina deve dire che il progetto usa SignPath Foundation: vedi sotto) |
+| Privacy Policy URL | `https://github.com/PyLuke73/fili#code-signing-policy` (sezione "Code signing policy" del README, con la nota sulla privacy) |
+| Wikipedia URL | lasciare vuoto |
+| Tagline* | `Replace the driver of a USB device on Windows, from the command line or a small window.` |
+| Category* | scegliere dall'elenco la voce più vicina a "system utilities" / "drivers / hardware tools" |
+| Description* | `fili replaces the driver of a USB device or interface on Windows (WinUSB, libusbK, libusb-win32 or the serial driver), like Zadig but scriptable. It has a command line and a small graphical window, shows exactly what it will do before changing anything, refuses to touch keyboards, mice, disks and Bluetooth unless forced, and can undo its changes.` |
+| Reputation* | vedi il testo qui sotto |
+| First Name*, Last Name*, Email* | i tuoi dati (account SignPath); non vanno scritti nel repository |
+| Company Name | vuoto (progetto personale) |
+| Maintainer Type | "Individual" / singola persona, se c'è |
+| Build System* | `GitHub Actions` |
+| Primary Discovery Channel* | la risposta vera (come hai conosciuto SignPath Foundation) |
 
-**Project name:** fili
+## Testo per "Reputation"
 
-**Repository / home page:** https://github.com/PyLuke73/fili
+> fili is a new project (first pre-release 0.1.0, October 2026), so it has no download history yet. What exists: an open
+> repository under GPL-3.0-or-later with about 170 automated tests, a documented test plan and reports of real-hardware tests
+> (docs/ in the repository), and a reproducible build on GitHub Actions. It is a scriptable alternative to Zadig, a tool the
+> community already trusts for the same task. Unsigned, Windows SmartScreen warns about every download, which is what the
+> signature would fix. I will add links to discussions or articles as soon as they exist.
 
-**Download page:** https://github.com/PyLuke73/fili/releases (pre-release 0.1.0, already released in the form to be signed)
+È onesto: un progetto così nuovo potrebbe essere rimandato per mancanza di reputazione. Più segnali (stelle, un post su un forum
+di libusb o di sviluppo USB, qualche download) aiutano; si può anche fare la richiesta qualche settimana dopo la pubblicazione.
 
-**License:** GPL-3.0-or-later (OSI approved, no commercial dual licensing, no proprietary components)
+## Prima dell'invio
 
-**Description:** fili replaces the driver of a USB device or interface on Windows (WinUSB, libusbK, libusb-win32, usbser),
-like Zadig but scriptable, from the command line (fili.exe) or a small window (fili-gui.exe). The driver itself is installed by
-libwdi's wdi-simple.exe, run as a separate program. Python, packaged with PyInstaller; installer built with Inno Setup.
-
-**What would be signed:** fili.exe, fili-gui.exe and the installer fili-setup-<version>.exe, all built from the repository by the
-GitHub Actions workflow .github/workflows/release.yml. wdi-simple.exe (built from libwdi, third-party code) is not signed by this project.
-
-**Why signing matters:** the tool changes drivers on the user's PC, so users must be able to see who published the files. Unsigned,
-SmartScreen shows "unknown publisher" and some antivirus products flag PyInstaller executables.
-
-**Code signing policy page:** README section "Code signing policy" (with the SignPath.io and SignPath Foundation attribution, roles and privacy statement).
-
-**Team:** one person, PyLuke73 (https://github.com/PyLuke73): author, reviewer and approver. Multi-factor authentication on GitHub and SignPath.
-
-**Privacy / system changes:** no telemetry and no network access at runtime. The installer only copies files and has an uninstaller.
-fili changes the driver of a device the user selects and, through libwdi, adds a self-signed certificate to the PC's trusted
-stores: this is stated at the top of the README, in the installer's first page and before every change (dry-run first, explicit
-confirmation, protected device classes refused without --force), and `fili cert-remove` removes the certificates.
-
-**Maintenance:** actively developed; about 170 automated tests (none touch the system); real-hardware test reports in docs/.
+1. Controllo finale che nel repository e nella storia non ci siano dati personali (lo rifaccio io subito prima).
+2. Rendere pubblico il repository (Settings, Danger Zone, Change visibility).
+3. Il file `docs/SignPath Foundation.pdf` è la copia della pagina del modulo: non è parte del progetto, **non va pubblicato**; toglierlo dalla cartella prima della pubblicazione.
+4. Download URL: la pagina delle release deve dire che si usa SignPath Foundation. Si aggiunge alle note della release **dopo** l'approvazione
+   ("Free code signing provided by SignPath.io, certificate by SignPath Foundation"); fino ad allora il README dice "richiesta inviata, non ancora concessa".
 
 ## Punti che il revisore potrebbe sollevare
 
-* *"Bypass security measures" / "change system configuration":* fili installa driver e un certificato autofirmato (come Zadig, che libwdi usa). È
-  dichiarato ovunque e richiede conferma; conviene dirlo noi per primi nel modulo, come sopra.
+* *"Bypass security measures" / "change system configuration":* fili installa driver e un certificato autofirmato (come Zadig, che usa libwdi). È
+  dichiarato nel README, nella prima pagina dell'installer e prima di ogni modifica (anteprima, conferma, classi protette rifiutate senza `--force`), e `fili cert-remove` lo toglie.
 * *"Own binaries only":* per questo `wdi-simple.exe` non si firma.
-* *Reputazione:* il progetto è nuovo (0.1.0): può servire tempo o qualche segnale (stelle, uso, post).
+* *Reputazione:* vedi sopra.
