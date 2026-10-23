@@ -10,3 +10,4 @@ __pycache__/
 fili.toml
 usb_driver/
 fili_*/
+logs/
