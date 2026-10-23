@@ -28,8 +28,12 @@ WITH_COINSTALLERS="${WITH_COINSTALLERS:-0}"
 WDK_DIR="$WW/wdk/Windows Kits/8.0"
 LIBUSB0_DIR="$WW/libusb0x/libusb-win32-bin-1.4.0.0"
 LIBUSBK_DIR="$WW/libusbkx/libusbK-3.1.0.0-bin/bin"
-for f in "$WDK_DIR/redist/wdf/x64/WdfCoInstaller01011.dll" "$WDK_DIR/redist/wdf/x64/winusbcoinstaller2.dll" \
-         "$LIBUSB0_DIR/bin/amd64/libusb0.sys" "$LIBUSBK_DIR/sys/amd64/libusbK.sys"; do
+NEEDED=("$LIBUSB0_DIR/bin/amd64/libusb0.sys" "$LIBUSBK_DIR/sys/amd64/libusbK.sys")
+# i co-installer Microsoft servono solo con WITH_COINSTALLERS=1
+if [ "$WITH_COINSTALLERS" = 1 ]; then
+  NEEDED+=("$WDK_DIR/redist/wdf/x64/WdfCoInstaller01011.dll" "$WDK_DIR/redist/wdf/x64/winusbcoinstaller2.dll")
+fi
+for f in "${NEEDED[@]}"; do
   [ -f "$f" ] || { echo "driver file not found: $f -- run scripts/fetch_wdi_deps.ps1 first" >&2; exit 1; }
 done
 
