@@ -157,6 +157,17 @@ The tests never touch the system (a fake command runner; the real one is replace
 Clean-room note: Zadig's source (GPL-3.0-or-later) was not copied or adapted; libwdi/wdi-simple (LGPL-3.0-or-later) is only
 run as an external program.
 
+## Code signing policy
+
+*Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).*
+(Applied for; until it is granted the releases are not signed. See [`docs/firma-del-codice.md`](docs/firma-del-codice.md).)
+
+* What is signed: `fili.exe`, `fili-gui.exe` and the installer, built from this repository by the GitHub Actions workflow
+  [`release.yml`](.github/workflows/release.yml). `wdi-simple.exe` is built from libwdi (third-party code) and is **not** signed by this project.
+* Team roles: author, reviewer and approver: [PyLuke73](https://github.com/PyLuke73) (sole maintainer). Every signing request is approved by hand.
+* Privacy policy: fili does not send any information to other networked systems. The only network access is a browser
+  page you open yourself (the Ko-fi button, the links); the installer and the programs make no network request.
+
 ## Support the project
 
 fili is free software. If it saved you time, you can support its development with a donation on
@@ -207,6 +218,8 @@ certificati, e la disinstallazione toglie solo ciò che ha messo. Licenze e sorg
 `LICENSES` e `THIRD_PARTY`. **Hash SHA-256:** la build scrive `dist\SHA256SUMS` (installer, eseguibili, `wdi-simple.exe`) da pubblicare
 accanto ai file; la cartella installata ha un proprio `SHA256SUMS` con tutti i file. Servono a rilevare un download corrotto o alterato,
 non sono una firma dell'autore (i file non sono firmati).
+
+**Politica di firma del codice (Code signing policy).** *Firma del codice gratuita fornita da [SignPath.io](https://signpath.io), certificato di [SignPath Foundation](https://signpath.org)* (richiesta inviata: finché non è concessa, le release non sono firmate; vedi `docs/firma-del-codice.md`). Si firmano `fili.exe`, `fili-gui.exe` e l'installer, compilati da questo repository con il flusso `release.yml`; `wdi-simple.exe` viene da libwdi e **non** è firmato da questo progetto. Autore, revisore e approvatore: [PyLuke73](https://github.com/PyLuke73) (unico manutentore); ogni richiesta di firma è approvata a mano. Privacy: fili non invia informazioni ad altri sistemi in rete; l'unico accesso alla rete è una pagina del browser che apri tu (il pulsante Ko-fi, i link).
 
 **Test:** `python -I tests/test_fili.py` e gli altri file in `tests\` (non toccano il sistema).
 

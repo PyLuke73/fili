@@ -28,6 +28,11 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayName=fili {#AppVersion}
+VersionInfoVersion={#AppVersion}
+VersionInfoProductName=fili
+VersionInfoProductVersion={#AppVersion}
+VersionInfoCompany=PyLuke73
+VersionInfoDescription=fili setup
 ChangesEnvironment=yes
 
 [Languages]

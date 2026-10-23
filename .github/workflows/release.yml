@@ -1,0 +1,151 @@
+# Compila fili.exe, fili-gui.exe e l'installer da questo repository e, se la firma e' configurata, li fa firmare da SignPath.
+#
+# Senza le variabili/segreti di SignPath (vedi docs/firma-del-codice.md) il flusso compila e non firma: serve a provare la build.
+# Con un tag v* (o a mano da "Run workflow") produce gli artefatti; con un tag v* li allega anche alla release del tag.
+# Si firmano SOLO fili.exe, fili-gui.exe e l'installer: wdi-simple.exe e' compilato da libwdi (codice di terzi) e non si firma.
+name: release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      actions: read          # SignPath legge i dettagli del job e scarica l'artefatto
+    env:
+      SIGN: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Strumenti (PyInstaller, compilatore MinGW, Inno Setup)
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check pyinstaller==6.16.0
+          /c/msys64/usr/bin/bash -lc "pacman -S --noconfirm --needed mingw-w64-ucrt-x86_64-gcc"
+          if ! ls "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" >/dev/null 2>&1; then choco install innosetup --no-progress -y; fi
+
+      - name: Test (non toccano il sistema)
+        shell: bash
+        run: |
+          python -I tests/test_fili.py
+          python -I tests/test_gui.py
+
+      - name: wdi-simple.exe da libwdi (codice di terzi, non firmato)
+        shell: bash
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fetch_wdi_deps.ps1
+          scripts/build_wdi_simple.sh
+
+      - name: fili.exe e fili-gui.exe
+        shell: bash
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build_exe.ps1
+
+      # --- firma di fili.exe e fili-gui.exe ---
+      - name: Prepara gli eseguibili da firmare
+        shell: bash
+        run: |
+          mkdir -p stage/exe
+          cp dist/fili.exe dist/fili-gui.exe stage/exe/
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        id: upload-exe
+        with:
+          name: eseguibili-da-firmare
+          path: stage/exe/*
+          if-no-files-found: error
+
+      - name: Firma gli eseguibili (SignPath)
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_EXE_CONFIG_SLUG }}
+          github-artifact-id: ${{ steps.upload-exe.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: stage/exe-signed
+
+      - name: Usa gli eseguibili firmati
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        shell: bash
+        run: |
+          cp stage/exe-signed/fili.exe stage/exe-signed/fili-gui.exe dist/
+          powershell -NoProfile -Command "Get-AuthenticodeSignature dist/fili.exe, dist/fili-gui.exe | Format-Table Path, Status -AutoSize"
+
+      # --- installer ---
+      - name: Installer
+        shell: bash
+        run: |
+          python -I scripts/package_wdi_bundle.py --exe build/wdi-simple.exe --out dist/wdi-bundle --drivers-file docs/embedded-drivers.txt
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build_installer.ps1
+          mkdir -p stage/setup
+          cp dist/installer/fili-setup-*.exe stage/setup/
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        id: upload-setup
+        with:
+          name: installer-da-firmare
+          path: stage/setup/*
+          if-no-files-found: error
+
+      - name: Firma l'installer (SignPath)
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_SETUP_CONFIG_SLUG }}
+          github-artifact-id: ${{ steps.upload-setup.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: stage/setup-signed
+
+      - name: File da pubblicare e hash
+        shell: bash
+        run: |
+          mkdir -p release
+          if [ "$SIGN" = "true" ]; then cp stage/setup-signed/fili-setup-*.exe release/; else cp stage/setup/fili-setup-*.exe release/; fi
+          (cd release && sha256sum fili-setup-*.exe > SHA256SUMS && cat SHA256SUMS)
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: release/*
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: release
+      - name: Allega i file alla release del tag (bozza se la release non esiste)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --prerelease --title "fili $TAG" \
+                 --notes "Bozza: completare le note prima di pubblicare."
+          gh release upload "$TAG" release/* --repo "$GITHUB_REPOSITORY" --clobber
