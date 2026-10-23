@@ -111,6 +111,8 @@ the confirmation (`--yes`).
 
 The exit codes and the version come from the program itself; a test checks that every command and every option named in the guide exists, so it cannot fall behind the CLI.
 
+The repository also has an [`llms.txt`](llms.txt) at its root: a short summary with links to the documentation, for tools that read it.
+
 ## USB that stops responding: `fili usb-reset`
 
 Windows has no USB service to restart: the stack is made of controller and hub drivers. When a device or `pnputil` hangs (`pnputil /restart-device` stayed stuck for over 15 minutes on a USB network adapter), `fili usb-reset --vid V --pid P [--instance ID] --dry-run` shows what it would do and `--yes` does it: it stops `pnputil` commands working on that device for longer than `--stuck-after` seconds (default 30), then disables and enables the device. `--hub` restarts the external hub it is plugged into instead (everything behind that hub disconnects for a moment; refused if a keyboard, mouse, disk or Bluetooth adapter is behind it, unless `--force`). The USB controller and its root hub are **never** restarted: that would also drop keyboard and mouse. `pnputil` commands have a time limit of 180 s and `wdi-simple` of 300 s: a command that does not finish is stopped, fili exits with 6 and points to `usb-reset`. **Limit:** if the vendor driver of the device is hung inside the kernel (seen with `--filter` on a USB network adapter), `pnputil /disable-device` times out too, on the device and on its hub; then only unplugging and replugging the device (or a reboot) helps.

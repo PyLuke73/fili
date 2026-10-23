@@ -1,0 +1,22 @@
+# fili
+
+> fili replaces the driver of a USB device or interface on Windows (WinUSB, libusbK, libusb-win32, usbser): a scriptable alternative to Zadig, with a command line (fili.exe) and a small graphical window (fili-gui.exe). It uses libwdi's wdi-simple.exe. Free software, GPL-3.0-or-later. Pre-release: it changes drivers and adds a self-signed certificate to the PC's trusted stores, so use it only on your own devices.
+
+If you are an AI agent asked to use fili for a person, run `fili --skill` first: it prints the rules, the workflow (list, status, --dry-run, ask the person, --yes), how to select a device, every command, the `--json` format, the exit codes and the recovery steps. Never add `--yes` or `--force` without the person's explicit approval of that exact command.
+
+## Docs
+
+- [README](https://github.com/PyLuke73/fili/blob/main/README.md): what it does, installer, quick start, global options, exit codes, `usb-reset`, English and Italian
+- [Hardware test results](https://github.com/PyLuke73/fili/blob/main/docs/risultati-prove-hardware.md): what was tested on real devices and what was not
+- [Zadig features](https://github.com/PyLuke73/fili/blob/main/docs/zadig-features.md): comparison with Zadig
+- [Building wdi-simple](https://github.com/PyLuke73/fili/blob/main/docs/building-wdi-simple.md): how the driver installer is built from libwdi
+- [Licenses](https://github.com/PyLuke73/fili/blob/main/docs/licenza.md): GPL-3.0-or-later and third-party components
+
+## Download
+
+- [Releases](https://github.com/PyLuke73/fili/releases): installer fili-setup-<version>.exe with SHA256SUMS (files are not code-signed)
+
+## Optional
+
+- [Installation test plan](https://github.com/PyLuke73/fili/blob/main/docs/piano-prove-installazione.md)
+- [Installer and GUI checklist](https://github.com/PyLuke73/fili/blob/main/docs/checklist-prove-gui-installer.md)
