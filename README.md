@@ -60,13 +60,6 @@ the files and check a download with `sha256sum -c SHA256SUMS` or `Get-FileHash <
 `SHA256SUMS` for every installed file (executables, licenses, sources), checked with `sha256sum -c SHA256SUMS` from that folder. The
 checksums detect a corrupted or altered download; they are not a signature of the author (the files are not code-signed).
 
-**Installer (italiano).** `fili-setup-<versione>.exe` installa `fili.exe`, `fili-gui.exe` e `wdi-simple.exe` in
-`C:\Program Files\fili`, con collegamenti nel menu Start e la voce nel PATH (proposta, selezionata di default, si può togliere). Copia solo file: non cambia driver né
-certificati, e la disinstallazione toglie solo ciò che ha messo. Licenze e sorgenti dei componenti di terzi sono nelle cartelle
-`LICENSES` e `THIRD_PARTY`. **Hash SHA-256:** la build scrive `dist\SHA256SUMS` (installer, eseguibili, `wdi-simple.exe`) da pubblicare
-accanto ai file; la cartella installata ha un proprio `SHA256SUMS` con tutti i file. Servono a rilevare un download corrotto o alterato,
-non sono una firma dell'autore (i file non sono firmati).
-
 ## Quick start
 
 ```powershell
@@ -205,6 +198,13 @@ INF non firmato per ispezione e **non crea certificati**. `install` richiede `wd
 **Per gli agenti AI:** `fili --skill` (alias `--skil`) stampa una guida completa per un'AI che deve usare fili al posto di una persona (regole, flusso di lavoro, selezione del dispositivo, comandi, formato `--json`, codici di uscita, recupero, limiti) ed esce con 0 senza toccare nulla. Con `--json` il testo è in `data.markdown`. La guida è in inglese; i codici di uscita e la versione vengono dal programma e un test controlla che ogni comando e ogni opzione citata esistano.
 
 **USB che non risponde:** `fili usb-reset --vid V --pid P [--instance ID] --dry-run` mostra cosa farebbe; con `--yes` ferma i `pnputil` appesi su quel dispositivo (più vecchi di `--stuck-after`, 30 s) e poi lo disattiva e riattiva. `--hub` riavvia invece l'hub esterno a cui è collegato (rifiutato se dietro c'è una tastiera, un mouse, un disco o un Bluetooth, salvo `--force`). Il controller USB e l'hub radice non si riavviano mai. I comandi `pnputil` hanno un limite di 180 s e `wdi-simple` di 300 s: se non finiscono vengono fermati, `fili` esce con 6 e indica `usb-reset`. **Limite:** se il driver del produttore è bloccato nel kernel (visto con `--filter` su un adattatore di rete USB) scade anche `pnputil /disable-device`, sul dispositivo e sul suo hub; allora serve scollegare e ricollegare il dispositivo (o riavviare).
+
+**Installer.** `fili-setup-<versione>.exe` installa `fili.exe`, `fili-gui.exe` e `wdi-simple.exe` in
+`C:\Program Files\fili`, con collegamenti nel menu Start e la voce nel PATH (proposta, selezionata di default, si può togliere). Copia solo file: non cambia driver né
+certificati, e la disinstallazione toglie solo ciò che ha messo. Licenze e sorgenti dei componenti di terzi sono nelle cartelle
+`LICENSES` e `THIRD_PARTY`. **Hash SHA-256:** la build scrive `dist\SHA256SUMS` (installer, eseguibili, `wdi-simple.exe`) da pubblicare
+accanto ai file; la cartella installata ha un proprio `SHA256SUMS` con tutti i file. Servono a rilevare un download corrotto o alterato,
+non sono una firma dell'autore (i file non sono firmati).
 
 **Test:** `python -I tests/test_fili.py` e gli altri file in `tests\` (non toccano il sistema).
 
