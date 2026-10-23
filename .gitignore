@@ -11,4 +11,4 @@ fili.toml
 usb_driver/
 fili_*/
 logs/
-docs/SignPath Foundation.pdf
+docs/*.pdf
