@@ -85,5 +85,58 @@ class TestRestart(unittest.TestCase):
         self.assertEqual(pnputil(run)[0][0], "/enable-device")
 
 
+class TestReinstallOriginalDriver(unittest.TestCase):
+    """reinstall di un dispositivo con il driver del produttore: si toglie il dispositivo e Windows lo rileva di nuovo."""
+    ARGV = ["reinstall", "--vid", "0BDA", "--pid", "8153"]
+
+    def run_with(self, problem=0):
+        return FakeRun(devices_json=DEVICES + [nic(problem)])
+
+    def test_dry_run_shows_remove_and_scan_and_changes_nothing(self):
+        code, out, err, run = call(self.ARGV + ["--dry-run"], run=self.run_with(22))
+        self.assertEqual(code, 0, err)
+        self.assertEqual(run.mutating(), [])
+        self.assertIn("/remove-device " + NIC, out)
+        self.assertIn("/scan-devices", out)
+        self.assertIn("not a driver installed by fili", out)
+
+    def test_needs_yes_and_administrator(self):
+        self.assertEqual(call(self.ARGV, run=self.run_with(), admin=True)[0], 7)
+        code, out, err, run = call(self.ARGV + ["--yes"], run=self.run_with(), admin=False)
+        self.assertEqual(code, 3)
+        self.assertEqual(run.mutating(), [])
+
+    def test_runs_remove_then_scan_and_checks_the_device(self):
+        run = FakeRun(devices_json=DEVICES + [nic(22)], after=DEVICES + [nic(0)])
+        code, out, err, run = call(self.ARGV + ["--yes"], run=run, admin=True)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(pnputil(run), [["/remove-device", NIC], ["/scan-devices"]])
+        self.assertIn("after:", out)
+
+    def test_no_wdi_and_no_certificate_are_involved(self):
+        code, out, err, run = call(self.ARGV + ["--yes"], run=self.run_with(), admin=True)
+        self.assertNotIn("wdi-simple", " ".join(" ".join(c) for c in run.mutating()))
+
+    def test_protected_class_needs_force(self):
+        argv = ["reinstall", "--vid", "093A", "--pid", "2510", "--yes"]
+        code, out, err, run = call(argv, run=FakeRun(), admin=True)
+        self.assertEqual(code, 2)
+        self.assertEqual(run.mutating(), [])
+
+    def test_device_that_does_not_come_back_is_an_error(self):
+        from fili import cli
+        from unittest import mock
+        run = FakeRun(devices_json=DEVICES + [nic(0)], after=DEVICES)
+        with mock.patch.object(cli, "RESET_WAIT", (2, 0)):
+            code, out, err, run = call(self.ARGV + ["--yes"], run=run, admin=True)
+        self.assertEqual(code, 6)
+        self.assertIn("not listed", err + out)
+
+    def test_a_fili_driver_still_takes_the_old_path(self):
+        code, out, err, run = call(["reinstall", "--vid", "0483", "--pid", "374B", "--iface", "2", "--dry-run"])
+        self.assertEqual(code, 0, err)
+        self.assertNotIn("/remove-device", out)
+
+
 if __name__ == "__main__":
     unittest.main()

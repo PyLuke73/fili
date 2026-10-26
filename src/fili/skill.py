@@ -14,7 +14,7 @@ COMMANDS = [
                         "Without a target it lists every device that reports a problem."),
     ("extract", "read-only", "Write an UNSIGNED INF for inspection into --out DIR. Creates no certificate."),
     ("install", "CHANGES the system, needs --yes + Administrator", "Replace the driver of ONE device/interface (winusb, libusbk, libusb-win32, usbser)."),
-    ("reinstall", "CHANGES the system, needs --yes + Administrator", "Install again the same kind of driver the device already uses."),
+    ("reinstall", "CHANGES the system, needs --yes + Administrator", "Install again the same kind of driver the device already uses; for a manufacturer's or Windows' driver, remove the device and let Windows detect it again (no certificate)."),
     ("restore", "CHANGES the system, needs --yes + Administrator", "Undo install: remove the OEM package fili created (and the libusb0 filter) so Windows binds the original driver."),
     ("uninstall", "CHANGES the system, needs --yes + Administrator", "Same as restore."),
     ("restart", "CHANGES the system, needs --yes + Administrator", "Enable a device that Windows shows as disabled (problem 22), or restart it. Changes no driver."),
@@ -43,7 +43,7 @@ self-signed certificate to the machine's trusted stores. Read the rules before r
    mouse, Bluetooth, disks, WPD): replacing their driver can disable the input devices the person is using.
 4. **Administrator.** Commands that change the system need an elevated terminal (exit code 3 otherwise). Tell the
    person to open "Terminal (Admin)" and rerun; do not try to elevate yourself.
-5. **Certificates.** `install` and `reinstall` add a self-signed certificate to the Root and TrustedPublisher stores of
+5. **Certificates.** `install`, and `reinstall` of a driver fili installed, add a self-signed certificate to the Root and TrustedPublisher stores of
    this PC. Tell the person, and at the end offer `fili cert-remove` (list) and `cert-remove --thumbprint <40 hex> --yes`.
 6. **Only devices the person owns**, preferably a sacrificial one. Never experiment on the boot disk, keyboard or mouse.
 7. **Do not restart the USB controller or work around fili's refusals.** A refusal (exit code 2) is a safety rule: report

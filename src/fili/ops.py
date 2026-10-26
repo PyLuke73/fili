@@ -459,6 +459,17 @@ def protected_below(kids: List[dict]) -> List[dict]:
 CM_PROB_DISABLED = 22
 
 
+def is_own_driver(dev: UsbDevice) -> bool:
+    """True se il driver attuale è uno di quelli che fili sa installare (WinUSB, libusbK, libusb-win32, usbser)."""
+    return dev.service.lower() in SERVICE_TO_DRIVER
+
+
+def reinstall_original_plan(dev: UsbDevice) -> List[List[str]]:
+    """Reinstallazione di un driver del produttore o di Windows: toglie UN dispositivo e fa rileggere i dispositivi, così
+    Windows lo rileva di nuovo e gli associa il driver migliore dell'archivio (lo stesso di prima, se non ce n'è uno migliore)."""
+    return [["pnputil", "/remove-device", _check_instance_id(dev.instance_id)], ["pnputil", "/scan-devices"]]
+
+
 def restart_plan(dev: UsbDevice) -> List[List[str]]:
     """Riavvio di UN dispositivo: se Windows lo riporta come disattivato (problema 22) lo riattiva, altrimenti lo riavvia.
     Non cambia nessun driver."""

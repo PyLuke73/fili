@@ -260,6 +260,10 @@ stores: see 'fili cert-remove --help' to list and remove it.
 Examples:
   fili reinstall --vid 1234 --pid 5678 --dry-run
   fili reinstall --vid 1234 --pid 5678 --iface 1 --yes
+
+With a driver fili installed (WinUSB, libusbK, libusb-win32, usbser) it installs the same one again. With the
+manufacturer's or Windows' own driver it removes the device and lets Windows detect it again with the best
+driver in its store (no certificate is added).
 """,
     "restore": """\
 Examples:
@@ -350,7 +354,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _target(s)
 
     for name, hlp in (("install", "replace the driver (needs --yes and Administrator)"),
-                      ("reinstall", "reinstall the driver currently bound (needs --yes and Administrator)")):
+                      ("reinstall", "reinstall the driver currently bound, also a manufacturer's driver (needs --yes and Administrator)")):
         s = add(name, help=hlp)
         _target(s)
         if name == "install":
@@ -662,6 +666,8 @@ def _run_wdi(build, wcid: bool, run, o: Out):
 
 def _cmd_install(args, cfg, dev, devs, run, admin, env, o: Out) -> int:
     dcfg = cfg["driver"]
+    if args.cmd == "reinstall" and dev.service and not ops.is_own_driver(dev):
+        return _cmd_reinstall_original(args, dev, run, admin, o)
     if args.cmd == "reinstall":
         driver = ops.driver_for_reinstall(dev)
     else:
@@ -821,6 +827,45 @@ def _cmd_restore(args, dev, devs, run, admin, o: Out) -> int:
 
 
 RESET_WAIT = (5, 3)   # (tentativi, secondi tra l'uno e l'altro) per veder tornare il dispositivo dopo il ripristino
+
+
+def _cmd_reinstall_original(args, dev, run, admin, o: Out) -> int:
+    """'reinstall' di un dispositivo che usa il driver del produttore (o di Windows): non c'è nulla da compilare né
+    certificati da aggiungere; si toglie il dispositivo e Windows lo rileva di nuovo con il driver migliore dell'archivio."""
+    msg = ops.check_protected(dev)
+    if msg and not args.force:
+        o.fail(msg)
+        return EXIT_USAGE
+    cmds = ops.reinstall_original_plan(dev)
+    o.say("Target  : " + _fmt_dev(dev))
+    o.say("Instance: " + dev.instance_id)
+    o.say("Driver  : %s %s is not a driver installed by fili. No driver is built and no certificate is added: Windows "
+          "will detect the device again and bind the best driver in its driver store (normally the same one)."
+          % (dev.service, "(%s)" % dev.driver_version if dev.driver_version else ""))
+    o.say("The device disappears for a few seconds. Settings stored for this device instance (for example it being "
+          "disabled) are reset.")
+    o.say("Plan:")
+    for c in cmds:
+        o.say("  " + _q(c))
+    gate = _gate(args, admin, o)
+    if gate is not None:
+        return gate
+    o.begin(len(cmds) + 2)
+    code = _execute(cmds, run, o, steps=True)
+    if code != EXIT_OK:
+        return code
+    o.advance("waiting for the device to come back")
+    tries, pause = RESET_WAIT
+    for i in range(tries):
+        if [d for d in list_devices(run) if d.instance_id.lower() == dev.instance_id.lower()]:
+            break
+        if i + 1 < tries:
+            time.sleep(pause)
+    else:
+        o.fail("the device is not listed after the reinstallation. Unplug it and plug it in again; if it does not "
+               "come back, try another port or run 'fili diagnose'.")
+        return EXIT_DRIVER
+    return _post_check(dev, None, run, o)
 
 
 def _cmd_restart(args, dev, run, admin, o: Out) -> int:

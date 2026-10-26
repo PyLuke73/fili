@@ -35,7 +35,7 @@ done by **libwdi** (`wdi-simple.exe`), used as a separate program (a subprocess,
 | `diagnose` | no | explains driver failures: Device Manager code, NTSTATUS, `setupapi.dev.log` excerpts, event logs |
 | `extract` | no (writes one INF in a folder you choose) | unsigned INF for inspection, **creates no certificate** |
 | `install` | **yes** | replaces the driver (WinUSB, libusbK, libusb-win32, CDC) of one device/interface |
-| `reinstall` | **yes** | puts back the driver currently bound |
+| `reinstall` | **yes** | puts back the driver currently bound; for a manufacturer's driver it removes the device and lets Windows detect it again (no certificate) |
 | `restore` / `uninstall` | **yes** | removes the OEM driver package of one device and lets Windows re-detect it |
 | `restart` | **yes** | enables a device that Windows shows as disabled (problem 22), otherwise restarts it; changes no driver |
 | `usb-reset` | **yes** | recovers a device (or its external hub) that does not respond: stops stuck `pnputil` commands, disables and enables it; never touches the USB controller |
@@ -210,6 +210,8 @@ INF non firmato per ispezione e **non crea certificati**. `install` richiede `wd
 (es. 10, 28, 43, 52), l'NTSTATUS, il driver corrente e le righe di `setupapi.dev.log` relative al dispositivo.
 
 **Per gli agenti AI:** `fili --skill` (alias `--skil`) stampa una guida completa per un'AI che deve usare fili al posto di una persona (regole, flusso di lavoro, selezione del dispositivo, comandi, formato `--json`, codici di uscita, recupero, limiti) ed esce con 0 senza toccare nulla. Con `--json` il testo è in `data.markdown`. La guida è in inglese; i codici di uscita e la versione vengono dal programma e un test controlla che ogni comando e ogni opzione citata esistano.
+
+**Reinstallare un driver del produttore:** `fili reinstall` su un dispositivo con il driver del produttore (o di Windows) lo toglie e lascia che Windows lo rilevi di nuovo con il driver migliore dell'archivio (niente certificati, niente `wdi-simple`).
 
 **Dispositivo disattivato:** `fili restart --vid V --pid P [--instance ID] --dry-run` mostra il piano; con `--yes` lo riattiva se Windows lo indica come disattivato (problema 22), altrimenti lo riavvia. Non cambia nessun driver. Nella finestra c'è il pulsante Restart.
 

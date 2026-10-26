@@ -13,7 +13,7 @@ import sys
 from dataclasses import dataclass
 from typing import Callable, List, Optional
 
-from . import cli
+from . import cli, ops
 
 
 @dataclass
@@ -111,7 +111,9 @@ OPTIONS
 BUTTONS
   Install       Replaces the driver of the selected device/interface with the chosen one. The window first shows
                 the plan (nothing is changed), then asks you to confirm. Needs Administrator.
-  Reinstall     Installs again the same kind of driver the device already uses (WinUSB, libusbK...).
+  Reinstall     Installs again the same kind of driver the device already uses (WinUSB, libusbK...). If the device
+                uses its original driver (the manufacturer's or Windows'), it removes the device and lets Windows
+                detect it again with the best driver in its store; nothing is built and no certificate is added.
   Restore       Undoes the change: removes the driver package created by fili (and the libusb-win32 filter)
                 so that Windows binds the original driver again.
   Restart       Enables the selected device if Windows shows it as disabled, otherwise restarts it. No driver is

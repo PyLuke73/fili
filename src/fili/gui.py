@@ -13,7 +13,7 @@ import webbrowser
 from tkinter import filedialog, messagebox, ttk
 from typing import Callable, List, Optional
 
-from . import __version__, guicore, iconpack
+from . import __version__, guicore, iconpack, ops
 
 DRIVERS = ("winusb", "libusbk", "libusb-win32", "usbser")
 COLUMNS = (("vidpid", "VID:PID", 90), ("mi", "Iface", 55), ("cls", "Class", 90), ("service", "Driver", 90),
@@ -169,8 +169,8 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("fili %s" % __version__)
-        self.geometry("1020x600")
-        self.minsize(960, 480)
+        self.geometry("1140x600")
+        self.minsize(1100, 480)
         self.images = {name: tk.PhotoImage(master=self, data=data) for name, data in iconpack.UI.items()}
         self.iconphoto(True, *[tk.PhotoImage(master=self, data=d) for _, d in sorted(iconpack.APP.items())])
         self.devices: List[dict] = []
@@ -418,7 +418,10 @@ class App(tk.Tk):
                                        "Use 'Restart as Administrator'.")
                 return
             body = "%s %s (%s)?" % (action.capitalize(), dev["vidpid"], dev["name"] or "no name")
-            question = body if action == "restart" else "%s\n\n%s" % (WARNING, body)
+            # restart e reinstall di un driver del produttore non cambiano driver né aggiungono certificati
+            own = (dev.get("service") or "").lower() in ops.SERVICE_TO_DRIVER
+            plain = action == "restart" or (action == "reinstall" and bool(dev.get("service")) and not own)
+            question = body if plain else "%s\n\n%s" % (WARNING, body)
             if messagebox.askyesno("Confirm", question, icon="warning"):
                 self.progress_start()
                 self.background(lambda: guicore.apply(argv, progress=self.on_progress), applied)
