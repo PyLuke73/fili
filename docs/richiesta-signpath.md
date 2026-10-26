@@ -46,3 +46,6 @@ di libusb o di sviluppo USB, qualche download) aiutano; si può anche fare la ri
   dichiarato nel README, nella prima pagina dell'installer e prima di ogni modifica (anteprima, conferma, classi protette rifiutate senza `--force`), e `fili cert-remove` lo toglie.
 * *"Own binaries only":* per questo `wdi-simple.exe` non si firma.
 * *Reputazione:* vedi sopra.
+* *"Trasferimenti di dati" (termini di SignPath):* dalla v0.1.0 esiste un controllo degli aggiornamenti, ma parte solo su richiesta dell'utente
+  (`fili update`, voce di menu della finestra) o con la casella "Check for updates at startup", **spenta di default**. Fa una sola richiesta anonima
+  all'API pubblica di GitHub, non invia dati dell'utente e non scarica né installa nulla. È descritto in `PRIVACY.md` e nella sezione "Code signing policy" del README.

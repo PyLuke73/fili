@@ -32,3 +32,6 @@ compila e **non firma**.
 2. `git tag vX.Y.Z` e `git push origin vX.Y.Z`: il flusso compila, chiede la firma, e crea la release **in bozza** con
    l'installer e `SHA256SUMS`. Si completano le note e si pubblica a mano.
 3. Verifica di un download: `Get-FileHash fili-setup-X.Y.Z.exe -Algorithm SHA256` e, se firmato, le proprietà del file (Firme digitali).
+4. Dopo la pubblicazione della release, `fili update` e il pulsante "Update available" della finestra la mostrano agli utenti che lo chiedono
+   (controllo a richiesta; l'avviso all'avvio è disattivato di default, vedi `PRIVACY.md`). Funziona solo con il repository pubblico.
+   Una bozza non è visibile: l'utente vede la versione solo dopo che la release è pubblicata (le pre-release contano, con l'indicazione "(pre-release)").

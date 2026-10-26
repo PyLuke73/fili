@@ -18,7 +18,7 @@ import textwrap
 import time
 from typing import Callable, List, Optional
 
-from . import __version__, diagnose, extract, licenses, ops
+from . import __version__, diagnose, extract, licenses, ops, updates
 from .config import SAMPLE, ConfigError, load_config
 from .devices import (AmbiguousError, NotFoundError, SelectionError, UsbDevice, filter_devices,
                       list_devices, parse_hex_id, select_target)
@@ -157,6 +157,7 @@ class Out:
         self.error: Optional[str] = None
         self.last_rc: Optional[int] = None
         self.progress: Optional[Callable[[int, int, str], None]] = None  # (passo corrente, passi totali, testo)
+        self.fetch: Optional[Callable] = None     # le Release da leggere per 'update' (nei test: dati finti)
         self._done = self._total = 0
 
     def begin(self, total: int) -> None:
@@ -225,6 +226,13 @@ Examples (1234:5678 stands for the VID:PID of your device):
   fili diagnose --vid 1234 --pid 5678         why does the driver fail to start?
 
 Run 'fili <command> --help' for the options and examples of each command.
+""",
+    "update": """\
+Examples:
+  fili update                        is a newer version published? (one anonymous request to GitHub)
+  fili update --json                 machine-readable: data.update_available, data.latest, data.url
+
+fili never checks by itself. This command only reads the public list of releases; it downloads and installs nothing.
 """,
     "list": """\
 Examples:
@@ -419,6 +427,10 @@ def _build_parser() -> argparse.ArgumentParser:
     s.add_argument("--yes", action="store_true")
     s.add_argument("--dry-run", action="store_true")
 
+    s = add("update", help="check whether a newer version is published on GitHub (downloads and installs nothing)")
+    s.add_argument("--check", action="store_true",
+                   help="accepted for clarity: checking is all this command does")
+
     add("licenses", help="list third-party components and their licenses (read-only)")
     add("sample-config", help="print a sample fili.toml")
     return p
@@ -457,7 +469,7 @@ def _logged_run(run: Callable, logger: logging.Logger) -> Callable:
 def main(argv: Optional[List[str]] = None, *, run: Optional[Callable] = None,
          is_admin: Optional[Callable[[], bool]] = None, env: Optional[dict] = None,
          out=None, err=None, setupapi_text: Optional[str] = None,
-         progress: Optional[Callable[[int, int, str], None]] = None) -> int:
+         progress: Optional[Callable[[int, int, str], None]] = None, fetch: Optional[Callable] = None) -> int:
     stream = out or sys.stdout
     errs = err or sys.stderr
     _safe_streams(stream, errs)
@@ -472,6 +484,7 @@ def main(argv: Optional[List[str]] = None, *, run: Optional[Callable] = None,
 
     o = Out(stream, errs, args.json, False)
     o.progress = progress
+    o.fetch = fetch
     try:
         cfg = load_config(args.config, env)
         level = args.log_level or cfg["general"]["log_level"]
@@ -484,7 +497,7 @@ def main(argv: Optional[List[str]] = None, *, run: Optional[Callable] = None,
         return o.finish(args.cmd, EXIT_USAGE)
 
     if run is None:
-        if sys.platform != "win32" and args.cmd not in ("sample-config", "licenses"):
+        if sys.platform != "win32" and args.cmd not in ("sample-config", "licenses", "update"):
             o.fail("fili works on Windows only.")
             return o.finish(args.cmd, EXIT_ERROR)
         run = _default_run
@@ -517,6 +530,16 @@ def _dispatch(args, cfg, run, admin, env, o: Out, logger, setupapi_text) -> int:
     cmd = args.cmd
     if cmd == "sample-config":
         o.say(SAMPLE.rstrip())
+        return EXIT_OK
+
+    if cmd == "update":
+        try:
+            o.data = updates.check(__version__, o.fetch)
+        except updates.UpdateError as e:
+            o.fail(str(e))
+            return EXIT_ERROR
+        for line in updates.describe(o.data):
+            o.say(line)
         return EXIT_OK
 
     if cmd == "licenses":

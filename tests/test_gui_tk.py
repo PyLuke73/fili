@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.join(HERE, "..", "src"))
 
 from test_fili import DEVICES, FakeRun, fake_wdi  # noqa: E402  (disattiva anche l'esecutore vero)
 
-from fili import cli, guicore  # noqa: E402
+from fili import cli, guicore, updates  # noqa: E402
 
 try:
     import tkinter as tk
@@ -58,6 +58,8 @@ class GuiCase(unittest.TestCase):
         self.answer = True         # risposta di askyesno
         self.opened = []           # url aperti
         self.save_path = os.path.join(self.tmp.name, "out.txt")
+        self.releases = []         # le Release che 'GitHub' restituisce (nessuna richiesta di rete nei test)
+        self.settings_env = {"APPDATA": os.path.join(self.tmp.name, "appdata")}
         self.env = {"FILI_WDI": fake_wdi(self.tmp.name)}
         real_call = guicore.call
 
@@ -81,6 +83,8 @@ class GuiCase(unittest.TestCase):
             mock.patch.object(gui.messagebox, "askyesno",
                               lambda *a, **k: (self.dialogs.append(("askyesno", a, k)), self.answer)[1]),
             mock.patch.object(gui.filedialog, "asksaveasfilename", lambda **k: self.save_path),
+            mock.patch.object(updates, "fetch_releases", lambda *a, **k: self.releases),
+            mock.patch.object(gui.App, "env", self.settings_env),
             mock.patch.object(gui.webbrowser, "open", lambda url, *a, **k: self.opened.append(url)),
         ]
         for p in patches:
@@ -429,6 +433,82 @@ class TestReadOnlyButtons(GuiCase):
         menu = app.nametowidget(app.cget("menu"))
         labels = [menu.entrycget(i, "label") for i in range(menu.index("end") + 1) if menu.type(i) == "cascade"]
         self.assertEqual(labels, ["File", "Help"])
+
+
+REL = [{"tag_name": "v9.0.0", "html_url": "https://github.com/PyLuke73/fili/releases/tag/v9.0.0", "prerelease": False,
+        "draft": False, "published_at": "2030-01-01T00:00:00Z"}]
+
+
+class TestUpdates(GuiCase):
+    def invoke(self, label):
+        menu = self.app.nametowidget(self.app.cget("menu"))
+        help_menu = menu.nametowidget(menu.entrycget(menu.index("end"), "menu"))
+        for i in range(help_menu.index("end") + 1):
+            if help_menu.type(i) != "separator" and help_menu.entrycget(i, "label") == label:
+                help_menu.invoke(i)
+                return
+        self.fail(label)
+
+    def test_nothing_contacts_the_network_by_default(self):
+        calls = []
+        with mock.patch.object(updates, "fetch_releases", lambda *a, **k: calls.append(1) or []):
+            app = self.start()
+            time.sleep(0.3)
+        self.assertEqual(calls, [])
+        self.assertFalse(app.auto_update.get())
+        self.assertFalse(app.update_btn.winfo_manager())
+
+    def test_manual_check_with_a_newer_version_offers_the_download_page(self):
+        self.releases = REL
+        app = self.start()
+        self.invoke("Check for updates...")
+        self.assertTrue(self.pump(lambda: any(d[0] == "askyesno" for d in self.dialogs)))
+        self.assertIn("9.0.0", str(self.dialogs[-1][1]))
+        self.assertEqual(self.opened, [REL[0]["html_url"]])
+        self.assertIn("9.0.0", app.update_btn.cget("text"))
+
+    def test_manual_check_when_up_to_date(self):
+        self.releases = [dict(REL[0], tag_name="v0.0.1", html_url="https://github.com/PyLuke73/fili/releases/tag/v0.0.1")]
+        self.start()
+        self.invoke("Check for updates...")
+        self.assertTrue(self.pump(lambda: any(d[0] == "info" for d in self.dialogs)))
+        self.assertIn("latest version", self.dialogs[-1][2])
+        self.assertEqual(self.opened, [])
+
+    def test_manual_check_reports_a_network_error(self):
+        def boom(*a, **k):
+            raise updates.UpdateError("cannot reach GitHub: offline")
+        self.start()
+        with mock.patch.object(updates, "fetch_releases", boom):
+            self.invoke("Check for updates...")
+            self.assertTrue(self.pump(lambda: any(d[0] == "error" for d in self.dialogs)))
+        self.assertIn("offline", self.dialogs[-1][2])
+
+    def test_startup_box_is_saved(self):
+        app = self.start()
+        self.invoke("Check for updates at startup")
+        self.assertTrue(app.auto_update.get())
+        self.assertIs(updates.load_settings(self.settings_env).get("check_updates"), True)
+
+    def test_automatic_check_is_silent_and_shows_a_button(self):
+        self.releases = REL
+        updates.save_settings(self.settings_env, check_updates=True)
+        app = self.start()
+        app.check_updates(manual=False)
+        self.assertTrue(self.pump(lambda: app.update_btn.winfo_manager()))
+        self.assertEqual([d for d in self.dialogs if d[0] in ("info", "askyesno", "error")], [])
+        self.assertIsInstance(updates.load_settings(self.settings_env).get("last_check"), float)
+        app.update_btn.invoke()
+        self.assertEqual(self.opened, [REL[0]["html_url"]])
+
+    def test_automatic_check_ignores_network_errors(self):
+        def boom(*a, **k):
+            raise updates.UpdateError("offline")
+        app = self.start()
+        with mock.patch.object(updates, "fetch_releases", boom):
+            app.check_updates(manual=False)
+            time.sleep(0.5)
+        self.assertEqual(self.dialogs, [])
 
 
 if __name__ == "__main__":

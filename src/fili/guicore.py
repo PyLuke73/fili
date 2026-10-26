@@ -123,6 +123,8 @@ BUTTONS
   Certificates  Lists the self-signed certificates created by libwdi in this PC's trusted stores (Root,
                 TrustedPublisher). Read-only. To remove one use the command line: fili cert-remove.
   Licenses      Shows the third-party components and their licenses. Read-only.
+  Updates       Help > Check for updates asks GitHub (one anonymous request) whether a newer version is published.
+                Nothing is downloaded or installed: the window only offers to open the download page.
   Save output   Saves the text of the lower box (plan, diagnosis, certificates, licenses) to a file.
   Help / About  This text / version, license and credits.
   Ko-fi (cup)   Opens the Ko-fi page to support the project with a donation (optional).
@@ -142,6 +144,9 @@ GOOD TO KNOW
     need the driver (fili cert-remove).
   * While a WinUSB/libusb driver is active, a storage device or camera is not available to Windows
     until you press Restore.
+  * fili contacts the Internet only when you ask: Help > Check for updates, or the box 'Check for updates at
+    startup' (Help menu, off by default, at most once a day). When a newer version exists a button appears at the
+    top; it opens the download page. See PRIVACY.md.
   * The same operations are available on the command line: run 'fili --help'.
 """
 
@@ -192,3 +197,8 @@ def relaunch_elevated(argv: Optional[List[str]] = None) -> bool:
         rest = ["-m", "fili.gui"] + rest
     return ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, subprocess.list2cmdline(rest),
                                                None, 1) > 32
+
+
+def check_updates(main: Callable = cli.main, **kw) -> Result:
+    """Chiede alla CLI se esiste una versione piu' recente ('fili update'). Solo su richiesta dell'utente o con il controllo all'avvio attivato."""
+    return call(["update"], main, **kw)

@@ -21,6 +21,8 @@ COMMANDS = [
     ("usb-reset", "CHANGES the system, needs --yes + Administrator", "Recover a device (or its external hub) that does not respond: stop stuck pnputil commands, "
                         "disable and enable it. Never touches the USB controller or the root hub."),
     ("cert-remove", "read-only without --thumbprint; with it CHANGES the system, needs --yes + Administrator", "Without --thumbprint: list the self-signed libwdi certificates (read-only). With --thumbprint and --yes: remove one."),
+    ("update", "read-only; the only command that uses the network", "Ask GitHub (one anonymous request) whether a newer fili release is published; "
+                        "downloads and installs nothing. Run it only if the person asks; fili never checks by itself."),
     ("licenses", "read-only", "Third-party components and licenses."),
     ("sample-config", "read-only", "Print a sample fili.toml."),
 ]
@@ -35,7 +37,8 @@ self-signed certificate to the machine's trusted stores. Read the rules before r
 ## Rules you must follow
 
 1. **Look before you touch.** `list`, `status`, `diagnose`, `extract`, `licenses`, `sample-config` and every command
-   with `--dry-run` change nothing. Use them first.
+   with `--dry-run` change nothing. Use them first. (`update` changes nothing either, but it contacts GitHub: run it only
+   when the person asks.)
 2. **Never add `--yes` or `--force` on your own.** Run the command with `--dry-run`, show the person the plan (it is in
    the output), say what will change and what could go wrong, and run it with `--yes` only after the person has clearly
    approved that exact command. Approval for one device or one command does not carry over to another.

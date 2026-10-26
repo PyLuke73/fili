@@ -2,7 +2,7 @@
 
 > fili replaces the driver of a USB device or interface on Windows (WinUSB, libusbK, libusb-win32, usbser): a scriptable alternative to Zadig, with a command line (fili.exe) and a small graphical window (fili-gui.exe). It uses libwdi's wdi-simple.exe. Free software, GPL-3.0-or-later. Pre-release: it changes drivers and adds a self-signed certificate to the PC's trusted stores, so use it only on your own devices.
 
-If you are an AI agent asked to use fili for a person, run `fili --skill` first: it prints the rules, the workflow (list, status, --dry-run, ask the person, --yes), how to select a device, every command, the `--json` format, the exit codes and the recovery steps. Never add `--yes` or `--force` without the person's explicit approval of that exact command.
+If you are an AI agent asked to use fili for a person, run `fili --skill` first: it prints the rules, the workflow (list, status, --dry-run, ask the person, --yes), how to select a device, every command, the `--json` format, the exit codes and the recovery steps. Never add `--yes` or `--force` without the person's explicit approval of that exact command. `fili update` is the only command that uses the network (one anonymous request to GitHub to see whether a newer version exists); run it only if the person asks.
 
 ## Docs
 

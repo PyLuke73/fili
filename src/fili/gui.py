@@ -4,6 +4,7 @@ La finestra mostra sempre il piano della prova (dry-run) e chiede conferma prima
 vera è la CLI con --yes, quindi ogni regola di sicurezza della CLI vale senza modifiche.
 """
 
+import os
 import sys
 import threading
 import time
@@ -13,7 +14,7 @@ import webbrowser
 from tkinter import filedialog, messagebox, ttk
 from typing import Callable, List, Optional
 
-from . import __version__, guicore, iconpack, ops
+from . import __version__, guicore, iconpack, ops, updates
 
 DRIVERS = ("winusb", "libusbk", "libusb-win32", "usbser")
 COLUMNS = (("vidpid", "VID:PID", 90), ("mi", "Iface", 55), ("cls", "Class", 90), ("service", "Driver", 90),
@@ -166,6 +167,8 @@ def show_text_window(parent, title: str, content: str, width: int = 100, height:
 
 
 class App(tk.Tk):
+    env = os.environ         # dove stanno le impostazioni (APPDATA); i test lo sostituiscono
+
     def __init__(self):
         super().__init__()
         self.title("fili %s" % __version__)
@@ -180,6 +183,8 @@ class App(tk.Tk):
         top.pack(fill="x")
         self.hubs = tk.BooleanVar(value=False)
         self.icon_button(top, "Ko-fi", "support", self.donate).pack(side="right", padx=(8, 0))
+        self.update_url = updates.RELEASES_URL
+        self.update_btn = ttk.Button(top, command=lambda: webbrowser.open(self.update_url))   # compare solo se c'e' una versione nuova
         self.icon_button(top, "Refresh", "refresh", self.refresh).pack(side="right")
         ttk.Checkbutton(top, text="Show hubs", variable=self.hubs, command=self.refresh).pack(side="right", padx=8)
         if not guicore.is_admin():
@@ -239,8 +244,12 @@ class App(tk.Tk):
         self.log = make_text(self)
         self.log_frame = scrolled(self, self.log)
         self.log_frame.pack(fill="both", expand=True, padx=6, pady=6)
+        self.settings = updates.load_settings(self.env)
+        self.auto_update = tk.BooleanVar(value=self.settings.get("check_updates") is True)
         self.build_menu()
         self.refresh()
+        if updates.auto_check_due(self.settings):       # solo se l'utente ha attivato la casella; altrimenti nessuna rete
+            self.after(1500, lambda: self.check_updates(manual=False))
 
     # -- menu, aiuto, informazioni, salva, copia -----------------------------------------------
     def build_menu(self) -> None:
@@ -254,6 +263,10 @@ class App(tk.Tk):
         help_menu.add_command(label="Help", command=self.help, accelerator="F1")
         help_menu.add_command(label="About / Licenses", command=self.about)
         help_menu.add_command(label="Buy me a coffee (Ko-fi)", command=self.donate)
+        help_menu.add_separator()
+        help_menu.add_command(label="Check for updates...", command=lambda: self.check_updates(manual=True))
+        help_menu.add_checkbutton(label="Check for updates at startup", variable=self.auto_update,
+                                  command=self.toggle_auto_update)
         bar.add_cascade(label="Help", menu=help_menu)
         self.configure(menu=bar)
         self.bind("<F1>", lambda e: self.help())
@@ -264,6 +277,40 @@ class App(tk.Tk):
 
     def donate(self) -> None:
         webbrowser.open(guicore.KOFI_URL)
+
+    def toggle_auto_update(self) -> None:
+        updates.save_settings(self.env, check_updates=bool(self.auto_update.get()))
+
+    def check_updates(self, manual: bool) -> None:
+        """Una richiesta anonima a GitHub, in un thread a parte. A mano mostra sempre l'esito; all'avvio solo se c'e' una
+        versione nuova (un errore di rete e' ignorato). Non scarica nulla: il pulsante apre la pagina del download."""
+        def done(res):
+            if isinstance(res, Exception) or not res.ok:
+                if manual:
+                    messagebox.showerror("fili", "Cannot check for updates: %s" % (
+                        res if isinstance(res, Exception) else res.error))
+                return
+            updates.save_settings(self.env, last_check=time.time())
+            data = res.data
+            if data["update_available"]:
+                self.update_url = data["url"]
+                self.update_btn.configure(text="Update available: %s" % data["latest"])
+                self.update_btn.pack(side="left", padx=8)
+            if manual:
+                text = chr(10).join(updates.describe(data))
+                if data["update_available"]:
+                    if messagebox.askyesno("fili", text + chr(10) * 2 + "Open the download page?"):
+                        webbrowser.open(self.update_url)
+                else:
+                    messagebox.showinfo("fili", text)
+
+        def run():
+            try:
+                res = guicore.check_updates()
+            except Exception as e:
+                res = e
+            self.after(0, lambda: done(res))
+        threading.Thread(target=run, daemon=True).start()
 
     def about(self) -> None:
         show_text_window(self, "About fili", guicore.about_text(), height=22)

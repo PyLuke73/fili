@@ -42,6 +42,7 @@ jobs:
         run: |
           python -I tests/test_fili.py
           python -I tests/test_gui.py
+          python -I tests/test_update.py
 
       - name: wdi-simple.exe da libwdi (codice di terzi, non firmato)
         shell: bash

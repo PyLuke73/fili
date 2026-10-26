@@ -37,6 +37,7 @@ done by **libwdi** (`wdi-simple.exe`), used as a separate program (a subprocess,
 | `install` | **yes** | replaces the driver (WinUSB, libusbK, libusb-win32, CDC) of one device/interface |
 | `reinstall` | **yes** | puts back the driver currently bound; for a manufacturer's driver it removes the device and lets Windows detect it again (no certificate) |
 | `restore` / `uninstall` | **yes** | removes the OEM driver package of one device and lets Windows re-detect it |
+| `update` | no (one anonymous request to GitHub) | says whether a newer version is published; **never runs by itself**, downloads and installs nothing |
 | `restart` | **yes** | enables a device that Windows shows as disabled (problem 22), otherwise restarts it; changes no driver |
 | `usb-reset` | **yes** | recovers a device (or its external hub) that does not respond: stops stuck `pnputil` commands, disables and enables it; never touches the USB controller |
 | `cert-remove` | **yes** (only with `--thumbprint`) | lists / removes the self-signed certificates created by libwdi |
@@ -166,8 +167,9 @@ run as an external program.
 * What is signed: `fili.exe`, `fili-gui.exe` and the installer, built from this repository by the GitHub Actions workflow
   [`release.yml`](.github/workflows/release.yml). `wdi-simple.exe` is built from libwdi (third-party code) and is **not** signed by this project.
 * Team roles: author, reviewer and approver: [PyLuke73](https://github.com/PyLuke73) (sole maintainer). Every signing request is approved by hand.
-* Privacy policy: see [`PRIVACY.md`](PRIVACY.md). In short, fili does not send any information to other networked systems. The only network access is a browser
-  page you open yourself (the Ko-fi button, the links); the installer and the programs make no network request.
+* Privacy policy: see [`PRIVACY.md`](PRIVACY.md). In short, fili does not send any information about you or your PC to other networked systems. It makes no
+  network request on its own. The only network accesses are the ones you start: a browser page (the Ko-fi button, the links) and the update check
+  (`fili update`, *Help > Check for updates*, or the startup box, which is off by default): one anonymous request to the public GitHub API, nothing downloaded or installed.
 
 ## Support the project
 
@@ -224,7 +226,7 @@ certificati, e la disinstallazione toglie solo ciò che ha messo. Licenze e sorg
 accanto ai file; la cartella installata ha un proprio `SHA256SUMS` con tutti i file. Servono a rilevare un download corrotto o alterato,
 non sono una firma dell'autore (i file non sono firmati).
 
-**Politica di firma del codice (Code signing policy).** *Firma del codice gratuita fornita da [SignPath.io](https://signpath.io), certificato di [SignPath Foundation](https://signpath.org)* (richiesta inviata: finché non è concessa, le release non sono firmate; vedi `docs/firma-del-codice.md`). Si firmano `fili.exe`, `fili-gui.exe` e l'installer, compilati da questo repository con il flusso `release.yml`; `wdi-simple.exe` viene da libwdi e **non** è firmato da questo progetto. Autore, revisore e approvatore: [PyLuke73](https://github.com/PyLuke73) (unico manutentore); ogni richiesta di firma è approvata a mano. Privacy: vedi `PRIVACY.md`; fili non invia informazioni ad altri sistemi in rete; l'unico accesso alla rete è una pagina del browser che apri tu (il pulsante Ko-fi, i link).
+**Politica di firma del codice (Code signing policy).** *Firma del codice gratuita fornita da [SignPath.io](https://signpath.io), certificato di [SignPath Foundation](https://signpath.org)* (richiesta inviata: finché non è concessa, le release non sono firmate; vedi `docs/firma-del-codice.md`). Si firmano `fili.exe`, `fili-gui.exe` e l'installer, compilati da questo repository con il flusso `release.yml`; `wdi-simple.exe` viene da libwdi e **non** è firmato da questo progetto. Autore, revisore e approvatore: [PyLuke73](https://github.com/PyLuke73) (unico manutentore); ogni richiesta di firma è approvata a mano. Privacy: vedi `PRIVACY.md`; fili non invia informazioni su di te o sul PC ad altri sistemi in rete e non fa richieste da solo; gli unici accessi alla rete sono quelli che avvii tu: una pagina del browser (il pulsante Ko-fi, i link) e il controllo degli aggiornamenti (`fili update`, *Help > Check for updates*, o la casella all'avvio, spenta di default): una richiesta anonima all'API pubblica di GitHub, senza scaricare né installare nulla.
 
 **Test:** `python -I tests/test_fili.py` e gli altri file in `tests\` (non toccano il sistema).
 
