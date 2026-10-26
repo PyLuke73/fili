@@ -1,4 +1,9 @@
-# Richiesta di firma gratuita a SignPath Foundation
+# Richiesta di firma gratuita a SignPath Foundation (archivio)
+
+> **Archivio.** La richiesta è stata inviata a ottobre 2026 e **non è stata accolta**: la firma di SignPath Foundation non è disponibile
+> per fili. Il progetto resta non firmato durante la fase di pre-release (vedi la sezione «Code signing» del README). Questo file si conserva
+> come riferimento, nel caso si riprovi, e per le risposte già preparate; le condizioni di SignPath possono essere cambiate nel frattempo.
+> Un'eventuale nuova richiesta richiede di rileggere https://signpath.org/terms e di aggiornare i campi qui sotto.
 
 Modulo: https://signpath.org/apply (condizioni: https://signpath.org/terms). Sotto, i campi del modulo (come risultano dal PDF
 della pagina) con la risposta pronta. **Il repository deve essere pubblico prima dell'invio.** I campi con `*` sono obbligatori.

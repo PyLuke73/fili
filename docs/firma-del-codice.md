@@ -1,8 +1,12 @@
-# Firma del codice (SignPath)
+# Firma del codice (SignPath) - archivio
 
-fili chiede la firma gratuita di **SignPath Foundation** per i progetti open source. Questo file spiega come è collegata
-la build e cosa va configurato quando la richiesta viene accettata. Fino ad allora il flusso `.github/workflows/release.yml`
-compila e **non firma**.
+> **Archivio.** La richiesta di firma gratuita a SignPath Foundation non è stata accolta (vedi `docs/richiesta-signpath.md`). fili è **non firmato
+> durante la fase di pre-release**. Questo file descrive come la build è predisposta per una firma esterna, se in futuro si ottiene da SignPath
+> o da un altro servizio. Il flusso `.github/workflows/release.yml` compila e **non firma** finché le variabili e i segreti qui sotto non sono impostati;
+> con un altro certificato cambierebbero solo i due passaggi «Firma …» del flusso.
+
+fili aveva chiesto la firma gratuita di **SignPath Foundation** per i progetti open source. Sotto: come è collegata la build e cosa andrebbe
+configurato se la firma venisse concessa.
 
 ## Cosa si firma
 
@@ -35,3 +39,16 @@ compila e **non firma**.
 4. Dopo la pubblicazione della release, `fili update` e il pulsante "Update available" della finestra la mostrano agli utenti che lo chiedono
    (controllo a richiesta; l'avviso all'avvio è disattivato di default, vedi `PRIVACY.md`). Funziona solo con il repository pubblico.
    Una bozza non è visibile: l'utente vede la versione solo dopo che la release è pubblicata (le pre-release contano, con l'indicazione "(pre-release)").
+
+## Alternative a SignPath (valutate a ottobre 2026)
+
+Da verificare di nuovo sui siti prima di decidere: prezzi e condizioni cambiano.
+
+| Opzione | Costo indicativo | Note per fili |
+|---|---|---|
+| Azure Artifact Signing (ex Trusted Signing) | circa 10 $/mese | per i singoli sviluppatori solo USA e Canada (aziende anche UE e Regno Unito) |
+| Certum «Open Source Code Signing» | da circa 49 € (cloud, SimplySign) o 69 € (carta e lettore) | persona fisica, progetto open source non commerciale (revoca se si firma software commerciale); nel certificato compare il tuo nome con il prefisso «Open Source Developer»; il cloud richiede l'app SimplySign sul telefono, quindi probabilmente la firma va fatta a mano e non in GitHub Actions: da chiedere a Certum |
+| Certificato OV (DigiCert, Sectigo, GlobalSign) | circa 150-300 $/anno | valido ovunque; la chiave sta su chiavetta o servizio cloud |
+| Microsoft Store (MSIX) | firma gratuita | probabilmente inadatto: fili richiede i permessi di amministratore; non verificato |
+
+In ogni caso SmartScreen costruisce la reputazione col tempo: la firma toglie «editore sconosciuto» ma non fa sparire subito gli avvisi.
