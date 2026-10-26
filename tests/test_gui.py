@@ -49,6 +49,11 @@ class TestGuiCore(unittest.TestCase):
         with self.assertRaises(ValueError):
             guicore.install_args("rm -rf", dev)
 
+    def test_restart_args_select_one_device_and_carry_no_driver_options(self):
+        dev = {"vid": 0x0BDA, "pid": 0x8153, "instance_id": r"USB\X\1"}
+        self.assertEqual(guicore.install_args("restart", dev, "libusbk", force=True, wcid=True),
+                         ["restart", "--vid", "0BDA", "--pid", "8153", "--instance", r"USB\X\1"])
+
     def test_all_matching_is_passed_to_install_reinstall_and_restore(self):
         dev = find(self.devices(), 0x483, 0x374B, 0)
         for action in ("install", "reinstall", "restore"):
@@ -97,7 +102,7 @@ class TestGuiCore(unittest.TestCase):
             self.assertTrue(guicore.preview(argv + ["--force"], **kw(run, True)).ok)
 
     def test_help_explains_every_button(self):
-        for word in ("Install", "Reinstall", "Restore", "Diagnose", "Certificates", "Licenses", "Save output",
+        for word in ("Install", "Reinstall", "Restore", "Restart", "Diagnose", "Certificates", "Licenses", "Save output",
                      "Driver", "Name", "WCID", "Filter driver", "Force"):
             self.assertIn(word, guicore.HELP_TEXT)
 

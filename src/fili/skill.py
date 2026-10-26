@@ -17,6 +17,7 @@ COMMANDS = [
     ("reinstall", "CHANGES the system, needs --yes + Administrator", "Install again the same kind of driver the device already uses."),
     ("restore", "CHANGES the system, needs --yes + Administrator", "Undo install: remove the OEM package fili created (and the libusb0 filter) so Windows binds the original driver."),
     ("uninstall", "CHANGES the system, needs --yes + Administrator", "Same as restore."),
+    ("restart", "CHANGES the system, needs --yes + Administrator", "Enable a device that Windows shows as disabled (problem 22), or restart it. Changes no driver."),
     ("usb-reset", "CHANGES the system, needs --yes + Administrator", "Recover a device (or its external hub) that does not respond: stop stuck pnputil commands, "
                         "disable and enable it. Never touches the USB controller or the root hub."),
     ("cert-remove", "read-only without --thumbprint; with it CHANGES the system, needs --yes + Administrator", "Without --thumbprint: list the self-signed libwdi certificates (read-only). With --thumbprint and --yes: remove one."),
@@ -101,6 +102,8 @@ With `--json` stdout is exactly one JSON document:
   device sits behind (everything behind that hub disconnects for a moment; fili refuses if a keyboard, mouse or disk is
   behind it unless `--force`). `usb-reset` cannot unstick a driver that is hung inside the kernel: if `pnputil
   /disable-device` itself times out, stop and ask the person to unplug and replug the device (or reboot). Do not loop.
+- **A device is shown as disabled** (problem 22) or does not work after a plug event: `fili restart ... --dry-run`, show the
+  plan, and with approval `--yes`: it enables a disabled device, otherwise restarts it. It changes no driver.
 - **`wdi-simple.exe` not found**: `install` needs it (`--wdi PATH`, `$FILI_WDI`, `PATH`, or next to `fili.exe`). The
   read-only commands and every `--dry-run` work without it.
 - **`--filter` on network adapters is not supported**: the device restart hangs. Use it on devices without a vendor

@@ -48,6 +48,8 @@ def target_args(dev: dict) -> List[str]:
 
 def install_args(action: str, dev: dict, driver: str = "winusb", *, force: bool = False, name: str = "",
                  wcid: bool = False, filter_driver: bool = False, all_matching: bool = False) -> List[str]:
+    if action == "restart":          # non cambia driver: solo il dispositivo scelto
+        return [action] + target_args(dev)
     if action not in ("install", "reinstall", "restore"):
         raise ValueError("unknown action '%s'" % action)
     argv = [action] + target_args(dev)
@@ -112,6 +114,8 @@ BUTTONS
   Reinstall     Installs again the same kind of driver the device already uses (WinUSB, libusbK...).
   Restore       Undoes the change: removes the driver package created by fili (and the libusb-win32 filter)
                 so that Windows binds the original driver again.
+  Restart       Enables the selected device if Windows shows it as disabled, otherwise restarts it. No driver is
+                changed. The window shows the plan and asks you to confirm. Needs Administrator.
   Diagnose      Explains why the driver of the selected device fails: problem code, setupapi.dev.log excerpt and
                 recent events. With no device selected it lists all devices that report a problem. Read-only.
   Certificates  Lists the self-signed certificates created by libwdi in this PC's trusted stores (Root,

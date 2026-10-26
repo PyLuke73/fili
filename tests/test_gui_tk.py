@@ -204,7 +204,7 @@ class TestStartup(GuiCase):
 
     def test_buttons_carry_the_icons_of_the_set(self):
         app = self.start()
-        for text in ("Install", "Reinstall", "Restore", "Diagnose", "Certificates", "Licenses", "Save output...", "Help",
+        for text in ("Install", "Reinstall", "Restore", "Restart", "Diagnose", "Certificates", "Licenses", "Save output...", "Help",
                      "About", "Refresh", "Ko-fi"):
             b = self.widget(ttk.Button, text)
             self.assertTrue(str(b.cget("image")), text)
@@ -229,9 +229,9 @@ class TestStartup(GuiCase):
 class TestSelectionAndGuards(GuiCase):
     def test_actions_without_a_selection_say_so_and_run_nothing(self):
         self.start()
-        for name in ("Install", "Reinstall", "Restore"):
+        for name in ("Install", "Reinstall", "Restore", "Restart"):
             self.press(name)
-        self.assertEqual([d[0] for d in self.dialogs], ["info"] * 3)
+        self.assertEqual([d[0] for d in self.dialogs], ["info"] * 4)
         self.assertTrue(all("Select a device first" in d[2] for d in self.dialogs))
         self.assertEqual(self.mutating(), [])
 

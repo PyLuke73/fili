@@ -268,6 +268,13 @@ Examples:
   fili restore --vid 1234 --pid 5678 --iface 1 --yes   one interface only
   fili restore --vid 1234 --pid 5678 --instance ID --all-matching --yes   undo 'install --all-matching'
 """,
+    "restart": """\
+Examples:
+  fili restart --vid 1234 --pid 5678 --dry-run              show what would be done
+  fili restart --vid 1234 --pid 5678 --yes                  enable it if Windows shows it as disabled, otherwise restart it
+  fili restart --vid 1234 --pid 5678 --instance ID --yes    one of several identical devices
+  (no driver is changed; for a device that hangs use 'fili usb-reset')
+""",
     "usb-reset": """\
 Examples:
   fili usb-reset --vid 1234 --pid 5678 --dry-run            show what would be done (stuck commands, plan)
@@ -370,6 +377,11 @@ def _build_parser() -> argparse.ArgumentParser:
         s.add_argument("--all-matching", action="store_true",
                        help="undo 'install --all-matching': remove a package shared with identical devices "
                             "(they go back to their original driver too)")
+
+    s = add("restart", help="enable a disabled device, or restart it; changes no driver (needs --yes and Administrator)")
+    _target(s)
+    s.add_argument("--yes", action="store_true")
+    s.add_argument("--dry-run", action="store_true")
 
     s = add("usb-reset", help="recover a device (or its hub) that does not respond; needs --yes and Administrator")
     _target(s)
@@ -562,6 +574,8 @@ def _dispatch(args, cfg, run, admin, env, o: Out, logger, setupapi_text) -> int:
         return _cmd_install(args, cfg, dev, devs, run, admin, env, o)
     if cmd == "usb-reset":
         return _cmd_usb_reset(args, dev, run, admin, o)
+    if cmd == "restart":
+        return _cmd_restart(args, dev, run, admin, o)
     return _cmd_restore(args, dev, devs, run, admin, o)
 
 
@@ -807,6 +821,28 @@ def _cmd_restore(args, dev, devs, run, admin, o: Out) -> int:
 
 
 RESET_WAIT = (5, 3)   # (tentativi, secondi tra l'uno e l'altro) per veder tornare il dispositivo dopo il ripristino
+
+
+def _cmd_restart(args, dev, run, admin, o: Out) -> int:
+    """Riattiva un dispositivo disattivato (problema 22) o lo riavvia. Non cambia driver: per questo non vale il blocco
+    delle classi protette (riattivare un mouse disattivato è proprio il caso d'uso)."""
+    cmds = ops.restart_plan(dev)
+    o.say("Target  : " + _fmt_dev(dev))
+    o.say("Instance: " + dev.instance_id)
+    if dev.problem_code == ops.CM_PROB_DISABLED:
+        o.say("Windows shows this device as disabled: it will be enabled.")
+    o.say("Plan:")
+    for c in cmds:
+        o.say("  " + _q(c))
+    gate = _gate(args, admin, o)
+    if gate is not None:
+        return gate
+    o.begin(len(cmds) + 1)
+    code = _execute(cmds, run, o, steps=True)
+    if code != EXIT_OK:
+        return code
+    o.advance("checking the result")
+    return _post_check(dev, None, run, o)
 
 
 def _cmd_usb_reset(args, dev, run, admin, o: Out) -> int:

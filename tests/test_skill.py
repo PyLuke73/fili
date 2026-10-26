@@ -93,7 +93,7 @@ class TestSkillContent(unittest.TestCase):
 
     def test_commands_that_change_the_system_are_marked(self):
         marked = {n: e for n, e, _ in skill.COMMANDS}
-        for name in ("install", "reinstall", "restore", "uninstall", "usb-reset"):
+        for name in ("install", "reinstall", "restore", "uninstall", "usb-reset", "restart"):
             self.assertIn("CHANGES the system", marked[name])
         for name in ("list", "status", "diagnose", "extract"):
             self.assertEqual(marked[name], "read-only")

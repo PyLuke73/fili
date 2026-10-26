@@ -213,8 +213,9 @@ class App(tk.Tk):
         btn = ttk.Frame(self, padding=6)
         btn.pack(fill="x")
         self.buttons = []
-        for text, action in (("Install", "install"), ("Reinstall", "reinstall"), ("Restore", "restore")):
-            b = self.icon_button(btn, text, action, lambda a=action: self.act(a))
+        for text, action, icon in (("Install", "install", "install"), ("Reinstall", "reinstall", "reinstall"),
+                                   ("Restore", "restore", "restore"), ("Restart", "restart", "usb-reset")):
+            b = self.icon_button(btn, text, icon, lambda a=action: self.act(a))
             b.pack(side="left", padx=2)
             self.buttons.append(b)
         for text, fn in (("Diagnose", self.diagnose), ("Certificates", self.certs), ("Licenses", self.licenses)):
@@ -416,7 +417,8 @@ class App(tk.Tk):
                 messagebox.showwarning("fili", "Administrator rights are needed to apply this change. "
                                        "Use 'Restart as Administrator'.")
                 return
-            question = "%s\n\n%s %s (%s)?" % (WARNING, action.capitalize(), dev["vidpid"], dev["name"] or "no name")
+            body = "%s %s (%s)?" % (action.capitalize(), dev["vidpid"], dev["name"] or "no name")
+            question = body if action == "restart" else "%s\n\n%s" % (WARNING, body)
             if messagebox.askyesno("Confirm", question, icon="warning"):
                 self.progress_start()
                 self.background(lambda: guicore.apply(argv, progress=self.on_progress), applied)

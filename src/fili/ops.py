@@ -456,6 +456,18 @@ def protected_below(kids: List[dict]) -> List[dict]:
     return [k for k in kids if k.get("Class") in PROTECTED_CLASSES]
 
 
+CM_PROB_DISABLED = 22
+
+
+def restart_plan(dev: UsbDevice) -> List[List[str]]:
+    """Riavvio di UN dispositivo: se Windows lo riporta come disattivato (problema 22) lo riattiva, altrimenti lo riavvia.
+    Non cambia nessun driver."""
+    target = _check_instance_id(dev.instance_id)
+    if dev.problem_code == CM_PROB_DISABLED:
+        return [["pnputil", "/enable-device", target]]
+    return [["pnputil", "/restart-device", target]]
+
+
 def usb_reset_plan(dev: UsbDevice, stuck: List[dict], hub: Optional[dict] = None,
                    stuck_after: int = STUCK_AFTER_S) -> List[List[str]]:
     """Comandi del recupero: ferma i pnputil appesi su questo dispositivo, poi disattiva e riattiva il dispositivo

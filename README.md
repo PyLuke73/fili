@@ -37,6 +37,7 @@ done by **libwdi** (`wdi-simple.exe`), used as a separate program (a subprocess,
 | `install` | **yes** | replaces the driver (WinUSB, libusbK, libusb-win32, CDC) of one device/interface |
 | `reinstall` | **yes** | puts back the driver currently bound |
 | `restore` / `uninstall` | **yes** | removes the OEM driver package of one device and lets Windows re-detect it |
+| `restart` | **yes** | enables a device that Windows shows as disabled (problem 22), otherwise restarts it; changes no driver |
 | `usb-reset` | **yes** | recovers a device (or its external hub) that does not respond: stops stuck `pnputil` commands, disables and enables it; never touches the USB controller |
 | `cert-remove` | **yes** (only with `--thumbprint`) | lists / removes the self-signed certificates created by libwdi |
 | `licenses` | no | third-party components and their licenses |
@@ -209,6 +210,8 @@ INF non firmato per ispezione e **non crea certificati**. `install` richiede `wd
 (es. 10, 28, 43, 52), l'NTSTATUS, il driver corrente e le righe di `setupapi.dev.log` relative al dispositivo.
 
 **Per gli agenti AI:** `fili --skill` (alias `--skil`) stampa una guida completa per un'AI che deve usare fili al posto di una persona (regole, flusso di lavoro, selezione del dispositivo, comandi, formato `--json`, codici di uscita, recupero, limiti) ed esce con 0 senza toccare nulla. Con `--json` il testo è in `data.markdown`. La guida è in inglese; i codici di uscita e la versione vengono dal programma e un test controlla che ogni comando e ogni opzione citata esistano.
+
+**Dispositivo disattivato:** `fili restart --vid V --pid P [--instance ID] --dry-run` mostra il piano; con `--yes` lo riattiva se Windows lo indica come disattivato (problema 22), altrimenti lo riavvia. Non cambia nessun driver. Nella finestra c'è il pulsante Restart.
 
 **USB che non risponde:** `fili usb-reset --vid V --pid P [--instance ID] --dry-run` mostra cosa farebbe; con `--yes` ferma i `pnputil` appesi su quel dispositivo (più vecchi di `--stuck-after`, 30 s) e poi lo disattiva e riattiva. `--hub` riavvia invece l'hub esterno a cui è collegato (rifiutato se dietro c'è una tastiera, un mouse, un disco o un Bluetooth, salvo `--force`). Il controller USB e l'hub radice non si riavviano mai. I comandi `pnputil` hanno un limite di 180 s e `wdi-simple` di 300 s: se non finiscono vengono fermati, `fili` esce con 6 e indica `usb-reset`. **Limite:** se il driver del produttore è bloccato nel kernel (visto con `--filter` su un adattatore di rete USB) scade anche `pnputil /disable-device`, sul dispositivo e sul suo hub; allora serve scollegare e ricollegare il dispositivo (o riavviare).
 
