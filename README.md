@@ -159,16 +159,15 @@ The tests never touch the system (a fake command runner; the real one is replace
 Clean-room note: Zadig's source (GPL-3.0-or-later) was not copied or adapted; libwdi/wdi-simple (LGPL-3.0-or-later) is only
 run as an external program.
 
-## Code signing policy
+## Code signing
 
-*Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).*
-(Applied for; until it is granted the releases are not signed. See [`docs/firma-del-codice.md`](docs/firma-del-codice.md).)
+**The programs are not code-signed during the pre-release phase.** Windows SmartScreen may show "unknown publisher" and some antivirus
+programs may flag executables built with PyInstaller. To check a download, compare it with `SHA256SUMS` (`Get-FileHash fili-setup-X.Y.Z.exe -Algorithm SHA256`);
+the whole source and the build workflow ([`release.yml`](.github/workflows/release.yml)) are in this repository. Signing is not promised for any date.
+`wdi-simple.exe` is built from libwdi (third-party code) and is not made by this project.
 
-* What is signed: `fili.exe`, `fili-gui.exe` and the installer, built from this repository by the GitHub Actions workflow
-  [`release.yml`](.github/workflows/release.yml). `wdi-simple.exe` is built from libwdi (third-party code) and is **not** signed by this project.
-* Team roles: author, reviewer and approver: [PyLuke73](https://github.com/PyLuke73) (sole maintainer). Every signing request is approved by hand.
-* Privacy policy: see [`PRIVACY.md`](PRIVACY.md). In short, fili does not send any information about you or your PC to other networked systems. It makes no
-  network request on its own. The only network accesses are the ones you start: a browser page (the Ko-fi button, the links) and the update check
+**Privacy.** See [`PRIVACY.md`](PRIVACY.md). In short, fili does not send any information about you or your PC to other networked systems. It makes no
+network request on its own. The only network accesses are the ones you start: a browser page (the Ko-fi button, the links) and the update check
   (`fili update`, *Help > Check for updates*, or the startup box, which is off by default): one anonymous request to the public GitHub API, nothing downloaded or installed.
 
 ## Support the project
@@ -226,7 +225,7 @@ certificati, e la disinstallazione toglie solo ciò che ha messo. Licenze e sorg
 accanto ai file; la cartella installata ha un proprio `SHA256SUMS` con tutti i file. Servono a rilevare un download corrotto o alterato,
 non sono una firma dell'autore (i file non sono firmati).
 
-**Politica di firma del codice (Code signing policy).** *Firma del codice gratuita fornita da [SignPath.io](https://signpath.io), certificato di [SignPath Foundation](https://signpath.org)* (richiesta inviata: finché non è concessa, le release non sono firmate; vedi `docs/firma-del-codice.md`). Si firmano `fili.exe`, `fili-gui.exe` e l'installer, compilati da questo repository con il flusso `release.yml`; `wdi-simple.exe` viene da libwdi e **non** è firmato da questo progetto. Autore, revisore e approvatore: [PyLuke73](https://github.com/PyLuke73) (unico manutentore); ogni richiesta di firma è approvata a mano. Privacy: vedi `PRIVACY.md`; fili non invia informazioni su di te o sul PC ad altri sistemi in rete e non fa richieste da solo; gli unici accessi alla rete sono quelli che avvii tu: una pagina del browser (il pulsante Ko-fi, i link) e il controllo degli aggiornamenti (`fili update`, *Help > Check for updates*, o la casella all'avvio, spenta di default): una richiesta anonima all'API pubblica di GitHub, senza scaricare né installare nulla.
+**Firma del codice.** **Durante la fase di pre-release i programmi non sono firmati.** SmartScreen può mostrare «editore sconosciuto» e alcuni antivirus possono segnalare gli eseguibili creati con PyInstaller. Per controllare un download confrontalo con `SHA256SUMS` (`Get-FileHash fili-setup-X.Y.Z.exe -Algorithm SHA256`); il codice sorgente e il flusso di compilazione (`release.yml`) sono in questo repository. Nessuna data è promessa per la firma. `wdi-simple.exe` viene da libwdi (codice di terzi). **Privacy.** Vedi `PRIVACY.md`; fili non invia informazioni su di te o sul PC ad altri sistemi in rete e non fa richieste da solo; gli unici accessi alla rete sono quelli che avvii tu: una pagina del browser (il pulsante Ko-fi, i link) e il controllo degli aggiornamenti (`fili update`, *Help > Check for updates*, o la casella all'avvio, spenta di default): una richiesta anonima all'API pubblica di GitHub, senza scaricare né installare nulla.
 
 **Test:** `python -I tests/test_fili.py` e gli altri file in `tests\` (non toccano il sistema).
 
